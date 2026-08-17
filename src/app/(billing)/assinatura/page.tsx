@@ -66,7 +66,7 @@ export default function AssinaturaPage() {
     void load();
   }, []);
 
-  async function handleSubscribe() {
+  async function handleSubscribe(force = false) {
     setError(null);
     if (needsCpfCnpj && cpfCnpj.replace(/\D/g, "").length < 11) {
       setError("Informe um CPF ou CNPJ válido.");
@@ -76,7 +76,7 @@ export default function AssinaturaPage() {
     const res = await fetch("/api/subscriptions/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(needsCpfCnpj ? { cpfCnpj } : {}),
+      body: JSON.stringify({ ...(needsCpfCnpj ? { cpfCnpj } : {}), ...(force ? { force: true } : {}) }),
     });
     const data = await res.json().catch(() => null);
     setStarting(false);
@@ -189,17 +189,28 @@ export default function AssinaturaPage() {
                 subscription.status === "canceled" ||
                 subscription.status === "past_due" ||
                 subscription.status === "pending") && (
-                <button
-                  onClick={handleSubscribe}
-                  disabled={starting}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
-                >
-                  {starting
-                    ? "Abrindo pagamento..."
-                    : subscription.status === "pending"
-                      ? "Continuar pagamento"
-                      : "Assinar agora"}
-                </button>
+                <div>
+                  <button
+                    onClick={() => handleSubscribe()}
+                    disabled={starting}
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+                  >
+                    {starting
+                      ? "Abrindo pagamento..."
+                      : subscription.status === "pending"
+                        ? "Continuar pagamento"
+                        : "Assinar agora"}
+                  </button>
+                  {subscription.status === "pending" && (
+                    <button
+                      onClick={() => handleSubscribe(true)}
+                      disabled={starting}
+                      className="mt-1.5 block text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-300 disabled:opacity-60"
+                    >
+                      Link não funciona? Gerar um novo
+                    </button>
+                  )}
+                </div>
               )}
               {subscription.status === "active" && (
                 <button

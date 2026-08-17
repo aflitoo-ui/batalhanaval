@@ -8,6 +8,9 @@ export const POST = withApiErrors("subscriptions.checkout.POST", async (req: Nex
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
+  const body = await req.json().catch(() => null);
+  const force = body?.force === true;
+
   const sub = await get<{
     id: number;
     providerCustomerId: string | null;
@@ -29,15 +32,22 @@ export const POST = withApiErrors("subscriptions.checkout.POST", async (req: Nex
 
   // Já existe uma assinatura criada na Asaas esperando pagamento (ex: o
   // usuário fechou a página antes de pagar) — reaproveita a mesma fatura em
-  // vez de criar uma assinatura nova a cada tentativa.
-  if (sub.providerSubscriptionId) {
+  // vez de criar uma nova a cada tentativa, a não ser que o usuário peça
+  // explicitamente um link novo (force).
+  if (sub.providerSubscriptionId && !force) {
     const existingUrl = await provider.getPendingCheckoutUrl(sub.providerSubscriptionId);
     if (existingUrl) return NextResponse.json({ checkoutUrl: existingUrl });
   }
 
+  // Gerando um link novo de propósito com uma assinatura anterior ainda
+  // aberta na Asaas — cancela a antiga primeiro pra não correr o risco de
+  // cobrar as duas em paralelo caso a antiga seja paga depois.
+  if (force && sub.providerSubscriptionId) {
+    await provider.cancelSubscription(sub.providerSubscriptionId).catch(() => {});
+  }
+
   let cpfCnpj = sub.cpfCnpj;
   if (!cpfCnpj) {
-    const body = await req.json().catch(() => null);
     const digits = typeof body?.cpfCnpj === "string" ? body.cpfCnpj.replace(/\D/g, "") : "";
     if (digits.length !== 11 && digits.length !== 14) {
       return NextResponse.json(
