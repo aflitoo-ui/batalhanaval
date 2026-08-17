@@ -10,10 +10,21 @@ const NAV = [
   { href: "/relatorios", label: "Relatórios" },
 ];
 
-export default function AppShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
+export default function AppShell({
+  user,
+  daysLeft,
+  children,
+}: {
+  user: CurrentUser;
+  daysLeft?: number;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const nav = user.role === "admin" ? [...NAV, { href: "/usuarios", label: "Usuários" }] : NAV;
+  const nav =
+    user.role === "admin"
+      ? [...NAV, { href: "/usuarios", label: "Usuários" }, { href: "/admin/assinaturas", label: "Assinaturas" }]
+      : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -23,6 +34,16 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      {daysLeft !== undefined && (
+        <div className="border-b border-amber-900/50 bg-amber-950/40 px-4 py-1.5 text-center text-sm text-amber-300">
+          {daysLeft > 0
+            ? `Teste grátis: ${daysLeft} dia${daysLeft === 1 ? "" : "s"} restante${daysLeft === 1 ? "" : "s"}.`
+            : "Seu teste grátis termina hoje."}{" "}
+          <Link href="/assinatura" className="font-medium underline underline-offset-2">
+            Assinar agora
+          </Link>
+        </div>
+      )}
       <header className="border-b border-zinc-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">

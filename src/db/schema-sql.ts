@@ -75,4 +75,60 @@ ALTER TABLE products ADD CONSTRAINT products_user_id_name_key UNIQUE (user_id, n
 
 CREATE INDEX IF NOT EXISTS idx_products_user ON products(user_id);
 CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
+
+-- Assinaturas pagas (SaaS): cada usuário tem uma assinatura, que começa em
+-- trial e vira paga através de eventos de webhook do gateway de pagamento
+-- (nunca por retorno do navegador).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
+
+CREATE TABLE IF NOT EXISTS plans (
+  id SERIAL PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  price NUMERIC(10,2) NOT NULL,
+  interval TEXT NOT NULL DEFAULT 'month',
+  active BOOLEAN NOT NULL DEFAULT true
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_id INTEGER NOT NULL REFERENCES plans(id),
+  provider TEXT NOT NULL DEFAULT 'asaas',
+  provider_customer_id TEXT,
+  provider_subscription_id TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'trialing',
+  trial_ends_at TIMESTAMPTZ,
+  current_period_end DATE,
+  canceled_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS payments_history (
+  id SERIAL PRIMARY KEY,
+  subscription_id INTEGER NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+  provider_payment_id TEXT,
+  amount NUMERIC(10,2) NOT NULL,
+  status TEXT NOT NULL,
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id SERIAL PRIMARY KEY,
+  provider TEXT NOT NULL,
+  event_id TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (provider, event_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_history_subscription ON payments_history(subscription_id);
+
+INSERT INTO plans (code, name, price, interval)
+  VALUES ('mensal-2990', 'Plano Mensal', 29.90, 'month')
+  ON CONFLICT (code) DO NOTHING;
 `;
