@@ -26,6 +26,8 @@ type Sale = {
   profit: number;
 };
 
+type PaymentEntry = { id: number; amount: number; paidAt: string };
+
 function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -45,6 +47,7 @@ export default function VendasPage() {
   const [loading, setLoading] = useState(true);
   const [showNewSale, setShowNewSale] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
+  const [editSaleId, setEditSaleId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
 
@@ -83,6 +86,47 @@ export default function VendasPage() {
     await fetch(`/api/sales/${id}`, { method: "DELETE" });
     setConfirmDeleteId(null);
     load();
+  }
+
+  function RowActions({ s }: { s: Sale }) {
+    if (confirmDeleteId === s.id) {
+      return (
+        <>
+          <span className="text-xs text-zinc-400">Excluir?</span>
+          <button onClick={() => handleDeleteSale(s.id)} className="text-xs font-medium text-red-400 hover:text-red-300">
+            sim
+          </button>
+          <button
+            onClick={() => setConfirmDeleteId(null)}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            não
+          </button>
+        </>
+      );
+    }
+    return (
+      <>
+        <button
+          onClick={() => setPaymentSaleId(s.id)}
+          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+        >
+          pagamentos
+        </button>
+        <button
+          onClick={() => setEditSaleId(s.id)}
+          className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+        >
+          editar
+        </button>
+        <button
+          onClick={() => setConfirmDeleteId(s.id)}
+          className="text-xs font-medium text-zinc-500 hover:text-red-400"
+        >
+          excluir
+        </button>
+      </>
+    );
   }
 
   return (
@@ -132,6 +176,7 @@ export default function VendasPage() {
                   </div>
                   <p className="text-right text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
                 </div>
+                {s.notes && <p className="mt-1.5 text-xs italic text-zinc-500">{s.notes}</p>}
                 <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                   <div>
                     <p className="text-[11px] text-zinc-500">Pagou</p>
@@ -146,41 +191,8 @@ export default function VendasPage() {
                     <p className="text-zinc-200">{formatBRL(s.profit)}</p>
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-end gap-3 border-t border-zinc-800 pt-2">
-                  {confirmDeleteId === s.id ? (
-                    <>
-                      <span className="text-xs text-zinc-400">Excluir?</span>
-                      <button
-                        onClick={() => handleDeleteSale(s.id)}
-                        className="text-xs font-medium text-red-400 hover:text-red-300"
-                      >
-                        sim
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                      >
-                        não
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {s.owed > 0 && (
-                        <button
-                          onClick={() => setPaymentSaleId(s.id)}
-                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                        >
-                          + pagamento
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setConfirmDeleteId(s.id)}
-                        className="text-xs font-medium text-zinc-500 hover:text-red-400"
-                      >
-                        excluir
-                      </button>
-                    </>
-                  )}
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-zinc-800 pt-2">
+                  <RowActions s={s} />
                 </div>
               </div>
             ))}
@@ -208,7 +220,14 @@ export default function VendasPage() {
                 {filteredSales.map((s) => (
                   <tr key={s.id} className="border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50">
                     <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
-                    <td className="px-3 py-2 font-medium text-zinc-200">{s.productName}</td>
+                    <td className="px-3 py-2 font-medium text-zinc-200">
+                      {s.productName}
+                      {s.notes && (
+                        <span className="ml-1.5 text-zinc-500" title={s.notes}>
+                          📝
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right text-zinc-300">{s.quantity}</td>
                     <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
                     <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
@@ -221,40 +240,7 @@ export default function VendasPage() {
                     <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
                     <td className="px-3 py-2">
                       <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                        {confirmDeleteId === s.id ? (
-                          <>
-                            <span className="text-xs text-zinc-400">Excluir?</span>
-                            <button
-                              onClick={() => handleDeleteSale(s.id)}
-                              className="text-xs font-medium text-red-400 hover:text-red-300"
-                            >
-                              sim
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                            >
-                              não
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            {s.owed > 0 && (
-                              <button
-                                onClick={() => setPaymentSaleId(s.id)}
-                                className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                              >
-                                + pagamento
-                              </button>
-                            )}
-                            <button
-                              onClick={() => setConfirmDeleteId(s.id)}
-                              className="text-xs font-medium text-zinc-500 hover:text-red-400"
-                            >
-                              excluir
-                            </button>
-                          </>
-                        )}
+                        <RowActions s={s} />
                       </div>
                     </td>
                   </tr>
@@ -276,14 +262,27 @@ export default function VendasPage() {
         />
       )}
 
+      {editSaleId !== null && (
+        <EditSaleModal
+          sale={sales.find((s) => s.id === editSaleId)!}
+          products={products.filter((p) => p.active)}
+          onClose={() => setEditSaleId(null)}
+          onSaved={() => {
+            setEditSaleId(null);
+            load();
+          }}
+        />
+      )}
+
       {paymentSaleId !== null && (
-        <PaymentModal
+        <PaymentsModal
           sale={sales.find((s) => s.id === paymentSaleId)!}
           onClose={() => setPaymentSaleId(null)}
           onSaved={() => {
             setPaymentSaleId(null);
             load();
           }}
+          onRefresh={load}
         />
       )}
     </div>
@@ -332,6 +331,7 @@ function NewSaleModal({
   const [buyPrice, setBuyPrice] = useState(String(products[0]?.defaultBuyPrice ?? ""));
   const [sellPrice, setSellPrice] = useState(String(products[0]?.defaultSellPrice ?? ""));
   const [initialPayment, setInitialPayment] = useState("");
+  const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -367,6 +367,7 @@ function NewSaleModal({
         unitBuyPrice: qp,
         unitSellPrice: qv,
         initialPayment: payment,
+        notes: notes.trim() || undefined,
       }),
     });
     const data = await res.json();
@@ -443,6 +444,14 @@ function NewSaleModal({
             inputMode="decimal"
           />
         </Field>
+        <Field label="Observação (opcional)">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="input min-h-16 resize-y"
+            placeholder="Alguma anotação sobre essa venda..."
+          />
+        </Field>
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           type="submit"
@@ -456,11 +465,156 @@ function NewSaleModal({
   );
 }
 
-function PaymentModal({ sale, onClose, onSaved }: { sale: Sale; onClose: () => void; onSaved: () => void }) {
+function EditSaleModal({
+  sale,
+  products,
+  onClose,
+  onSaved,
+}: {
+  sale: Sale;
+  products: Product[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [saleDate, setSaleDate] = useState(sale.saleDate.slice(0, 10));
+  const [productId, setProductId] = useState<number>(sale.productId);
+  const [customerName, setCustomerName] = useState(sale.customerName);
+  const [quantity, setQuantity] = useState(String(sale.quantity));
+  const [buyPrice, setBuyPrice] = useState(String(sale.unitBuyPrice));
+  const [sellPrice, setSellPrice] = useState(String(sale.unitSellPrice));
+  const [notes, setNotes] = useState(sale.notes || "");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Produto pode ter sido desativado desde a venda — garante que continue
+  // aparecendo como opção pra não perder a referência ao editar outra coisa.
+  const productOptions = products.some((p) => p.id === sale.productId)
+    ? products
+    : [{ id: sale.productId, name: sale.productName, defaultBuyPrice: 0, defaultSellPrice: 0, active: false }, ...products];
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const qty = Number(quantity.replace(",", "."));
+    const qp = Number(buyPrice.replace(",", "."));
+    const qv = Number(sellPrice.replace(",", "."));
+    if (!productId || !customerName.trim() || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+      setError("Preencha todos os campos corretamente.");
+      return;
+    }
+    setSaving(true);
+    const res = await fetch(`/api/sales/${sale.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        saleDate,
+        productId,
+        customerName: customerName.trim(),
+        quantity: qty,
+        unitBuyPrice: qp,
+        unitSellPrice: qv,
+        notes: notes.trim() || null,
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    setSaving(false);
+    if (!res.ok) {
+      setError(data?.error || "Erro ao salvar.");
+      return;
+    }
+    onSaved();
+  }
+
+  return (
+    <ModalShell title={`Editar venda — ${sale.customerName}`} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Data">
+            <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="input" />
+          </Field>
+          <Field label="Produto">
+            <select value={productId} onChange={(e) => setProductId(Number(e.target.value))} className="input">
+              {productOptions.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+        <Field label="Cliente">
+          <input
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="input"
+            placeholder="Nome do cliente"
+            autoFocus
+          />
+        </Field>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Field label="Quantidade">
+            <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
+          </Field>
+          <Field label="Quanto você pagou?">
+            <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
+          </Field>
+          <Field label="A quanto você vende?">
+            <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
+          </Field>
+        </div>
+        <Field label="Observação (opcional)">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="input min-h-16 resize-y"
+            placeholder="Alguma anotação sobre essa venda..."
+          />
+        </Field>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+        >
+          {saving ? "Salvando..." : "Salvar alterações"}
+        </button>
+      </form>
+    </ModalShell>
+  );
+}
+
+function PaymentsModal({
+  sale,
+  onClose,
+  onSaved,
+  onRefresh,
+}: {
+  sale: Sale;
+  onClose: () => void;
+  onSaved: () => void;
+  onRefresh: () => void;
+}) {
+  const [history, setHistory] = useState<PaymentEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [amount, setAmount] = useState("");
   const [paidAt, setPaidAt] = useState(todayISO());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  async function loadHistory() {
+    setLoadingHistory(true);
+    const res = await fetch(`/api/sales/${sale.id}/payments`);
+    const data = await res.json().catch(() => null);
+    setHistory(data?.payments || []);
+    setLoadingHistory(false);
+  }
+
+  useEffect(() => {
+    void loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sale.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -485,36 +639,107 @@ function PaymentModal({ sale, onClose, onSaved }: { sale: Sale; onClose: () => v
     onSaved();
   }
 
+  async function handleDeletePayment(id: number) {
+    setDeletingId(id);
+    await fetch(`/api/payments/${id}`, { method: "DELETE" });
+    setDeletingId(null);
+    setConfirmDeleteId(null);
+    await loadHistory();
+    onRefresh();
+  }
+
   return (
-    <ModalShell title={`Pagamento — ${sale.customerName}`} onClose={onClose}>
-      <p className="mb-3 text-sm text-zinc-400">
-        Deve atualmente: <span className="font-medium text-red-400">{formatBRL(sale.owed)}</span>
-      </p>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Valor pago">
-            <input
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="input"
-              inputMode="decimal"
-              placeholder={String(sale.owed)}
-              autoFocus
-            />
-          </Field>
-          <Field label="Data">
-            <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className="input" />
-          </Field>
+    <ModalShell title={`Pagamentos — ${sale.customerName}`} onClose={onClose}>
+      <div className="mb-3 grid grid-cols-3 gap-2 text-sm">
+        <div>
+          <p className="text-[11px] text-zinc-500">Total</p>
+          <p className="text-zinc-200">{formatBRL(sale.total)}</p>
         </div>
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        <button
-          type="submit"
-          disabled={saving}
-          className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
-        >
-          {saving ? "Salvando..." : "Registrar pagamento"}
-        </button>
-      </form>
+        <div>
+          <p className="text-[11px] text-zinc-500">Pagou</p>
+          <p className="text-emerald-400">{formatBRL(sale.paid)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-zinc-500">Deve</p>
+          <p className="font-medium text-red-400">{sale.owed > 0 ? formatBRL(sale.owed) : "-"}</p>
+        </div>
+      </div>
+
+      <div className="mb-4">
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Histórico</h3>
+        {loadingHistory ? (
+          <p className="text-sm text-zinc-500">Carregando...</p>
+        ) : history.length === 0 ? (
+          <p className="text-sm text-zinc-500">Nenhum pagamento registrado ainda.</p>
+        ) : (
+          <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+            {history.map((h) => (
+              <li
+                key={h.id}
+                className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm"
+              >
+                <span className="text-zinc-400">{formatDate(h.paidAt)}</span>
+                <span className="text-emerald-400">{formatBRL(h.amount)}</span>
+                {confirmDeleteId === h.id ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-xs text-zinc-500">Remover?</span>
+                    <button
+                      onClick={() => handleDeletePayment(h.id)}
+                      disabled={deletingId === h.id}
+                      className="text-xs font-medium text-red-400 hover:text-red-300 disabled:opacity-60"
+                    >
+                      {deletingId === h.id ? "..." : "sim"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                    >
+                      não
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(h.id)}
+                    className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                  >
+                    remover
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {sale.owed > 0 ? (
+        <form onSubmit={handleSubmit} className="space-y-3 border-t border-zinc-800 pt-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Valor pago">
+              <input
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="input"
+                inputMode="decimal"
+                placeholder={String(sale.owed)}
+                autoFocus
+              />
+            </Field>
+            <Field label="Data">
+              <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className="input" />
+            </Field>
+          </div>
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          <button
+            type="submit"
+            disabled={saving}
+            className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+          >
+            {saving ? "Salvando..." : "Registrar pagamento"}
+          </button>
+        </form>
+      ) : (
+        <p className="border-t border-zinc-800 pt-3 text-sm text-emerald-400">Pago integralmente.</p>
+      )}
     </ModalShell>
   );
 }
