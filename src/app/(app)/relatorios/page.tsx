@@ -23,6 +23,23 @@ function formatBRL(n: number) {
 
 type ProductAgg = { name: string; quantity: number; revenue: number; cost: number; profit: number; marginPct: number };
 type CustomerAgg = { key: string; name: string; total: number; paid: number; owed: number; profit: number };
+type MonthAgg = { key: string; label: string; total: number; profit: number };
+
+const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function aggregateByMonth(sales: Sale[]): MonthAgg[] {
+  const map = new Map<string, MonthAgg>();
+  for (const s of sales) {
+    const [y, m] = s.saleDate.split("T")[0].split("-");
+    const key = `${y}-${m}`;
+    const entry = map.get(key) || { key, label: `${MONTH_ABBR[Number(m) - 1]}/${y}`, total: 0, profit: 0 };
+    entry.total += s.total;
+    entry.profit += s.profit;
+    map.set(key, entry);
+  }
+  // Mais recente primeiro — a situação atual é o que mais importa de cara.
+  return Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
+}
 
 function aggregateByProduct(sales: Sale[]): ProductAgg[] {
   const map = new Map<string, ProductAgg>();
@@ -121,6 +138,7 @@ export default function RelatoriosPage() {
 
   const products = useMemo(() => aggregateByProduct(sales), [sales]);
   const customers = useMemo(() => aggregateByCustomer(sales), [sales]);
+  const recentMonths = useMemo(() => aggregateByMonth(sales).slice(0, 6), [sales]);
 
   const topByQuantity = useMemo(
     () =>
@@ -159,6 +177,25 @@ export default function RelatoriosPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-zinc-100">Relatórios</h1>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title="Faturamento por mês">
+          <RankedBars
+            items={recentMonths.map((m) => ({ name: m.label, value: m.total }))}
+            valueKey="month-total"
+            formatValue={formatBRL}
+            color="#3987e5"
+          />
+        </Panel>
+        <Panel title="Lucro por mês">
+          <RankedBars
+            items={recentMonths.map((m) => ({ name: m.label, value: m.profit }))}
+            valueKey="month-profit"
+            formatValue={formatBRL}
+            color="#199e70"
+          />
+        </Panel>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Produtos mais vendidos (quantidade)">
