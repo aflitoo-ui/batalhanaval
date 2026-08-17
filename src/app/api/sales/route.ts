@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { all, withTransaction } from "@/db/pool";
+import { all, get, withTransaction } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { saleSchema } from "@/lib/schemas";
@@ -27,6 +27,7 @@ const LIST_SQL = `
   LEFT JOIN (
     SELECT sale_id, SUM(amount) as total_paid FROM payments GROUP BY sale_id
   ) pay ON pay.sale_id = s.id
+  WHERE s.user_id = $1
   ORDER BY s.sale_date DESC, s.id DESC
 `;
 
@@ -62,7 +63,7 @@ export const GET = withApiErrors("sales.GET", async () => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
-  const rows = await all<SaleRow>(LIST_SQL);
+  const rows = await all<SaleRow>(LIST_SQL, [user.id]);
   return NextResponse.json({ sales: rows.map(toSaleView) });
 });
 
@@ -77,11 +78,16 @@ export const POST = withApiErrors("sales.POST", async (req: NextRequest) => {
   }
   const d = parsed.data;
 
+  const product = await get(`SELECT id FROM products WHERE id = $1 AND user_id = $2`, [d.productId, user.id]);
+  if (!product) {
+    return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+  }
+
   const id = await withTransaction(async (tx) => {
     const sale = await tx.get<{ id: number }>(
-      `INSERT INTO sales (sale_date, product_id, customer_name, quantity, unit_buy_price, unit_sell_price, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-      [d.saleDate, d.productId, d.customerName, d.quantity, d.unitBuyPrice, d.unitSellPrice, d.notes || null]
+      `INSERT INTO sales (user_id, sale_date, product_id, customer_name, quantity, unit_buy_price, unit_sell_price, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+      [user.id, d.saleDate, d.productId, d.customerName, d.quantity, d.unitBuyPrice, d.unitSellPrice, d.notes || null]
     );
     if (d.initialPayment && d.initialPayment > 0 && sale) {
       await tx.get(`INSERT INTO payments (sale_id, amount, paid_at) VALUES ($1, $2, $3)`, [

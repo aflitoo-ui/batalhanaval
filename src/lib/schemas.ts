@@ -24,3 +24,15 @@ export const paymentSchema = z.object({
   amount: z.number().positive(),
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
 });
+
+export const createUserSchema = z.object({
+  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres"),
+  role: z.enum(["admin", "user"]).optional(),
+});
+
+export const updateUserSchema = z.object({
+  active: z.boolean().optional(),
+  role: z.enum(["admin", "user"]).optional(),
+  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").optional(),
+});

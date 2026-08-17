@@ -39,8 +39,11 @@ export const PATCH = withApiErrors(
     if (fields.length === 0) {
       return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
     }
-    params.push(id);
-    await run(`UPDATE products SET ${fields.join(", ")} WHERE id = $${i}`, params);
+    params.push(id, user.id);
+    const result = await run(`UPDATE products SET ${fields.join(", ")} WHERE id = $${i} AND user_id = $${i + 1}`, params);
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+    }
     return NextResponse.json({ ok: true });
   }
 );
@@ -53,7 +56,10 @@ export const DELETE = withApiErrors(
 
     const { id } = await ctx.params;
     try {
-      await run(`DELETE FROM products WHERE id = $1`, [id]);
+      const result = await run(`DELETE FROM products WHERE id = $1 AND user_id = $2`, [id, user.id]);
+      if (result.rowCount === 0) {
+        return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
+      }
     } catch (err) {
       // Violação de chave estrangeira (código 23503 do Postgres) — o produto
       // já tem vendas ligadas a ele, apagar perderia esse histórico.

@@ -13,6 +13,7 @@ const NAV = [
 export default function AppShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const nav = user.role === "admin" ? [...NAV, { href: "/usuarios", label: "Usuários" }] : NAV;
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -27,7 +28,7 @@ export default function AppShell({ user, children }: { user: CurrentUser; childr
           <div className="flex items-center gap-6">
             <span className="text-lg font-bold tracking-tight">STRIX</span>
             <nav className="flex gap-1">
-              {NAV.map((item) => (
+              {nav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

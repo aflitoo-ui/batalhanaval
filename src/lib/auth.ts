@@ -3,9 +3,11 @@ import { cookies } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { get, run } from "@/db/pool";
 
+export type UserRole = "admin" | "user";
 export type CurrentUser = {
   id: number;
   email: string;
+  role: UserRole;
 };
 
 export { hashPassword, verifyPassword } from "./password";
@@ -50,16 +52,17 @@ export const getSessionUser = cache(async (): Promise<CurrentUser | null> => {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const row = await get<{ id: number; email: string; expiresAt: string }>(
-    `SELECT u.id, u.email, s.expires_at as "expiresAt"
+  const row = await get<{ id: number; email: string; role: string; active: boolean; expiresAt: string }>(
+    `SELECT u.id, u.email, u.role, u.active, s.expires_at as "expiresAt"
      FROM sessions s JOIN users u ON u.id = s.user_id
      WHERE s.token = $1`,
     [token]
   );
   if (!row) return null;
+  if (!row.active) return null;
   if (new Date(row.expiresAt) < new Date()) {
     await run(`DELETE FROM sessions WHERE token = $1`, [token]);
     return null;
   }
-  return { id: row.id, email: row.email };
+  return { id: row.id, email: row.email, role: row.role === "admin" ? "admin" : "user" };
 });

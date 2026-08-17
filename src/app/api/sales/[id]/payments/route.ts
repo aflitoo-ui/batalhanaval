@@ -11,6 +11,9 @@ export const GET = withApiErrors(
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
     const { id } = await ctx.params;
+    const sale = await get(`SELECT id FROM sales WHERE id = $1 AND user_id = $2`, [id, user.id]);
+    if (!sale) return NextResponse.json({ error: "Venda não encontrada." }, { status: 404 });
+
     const rows = await all<{ id: number; amount: string; paidAt: string }>(
       `SELECT id, amount, paid_at as "paidAt" FROM payments WHERE sale_id = $1 ORDER BY paid_at DESC, id DESC`,
       [id]
@@ -28,7 +31,7 @@ export const POST = withApiErrors(
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
     const { id } = await ctx.params;
-    const sale = await get(`SELECT id FROM sales WHERE id = $1`, [id]);
+    const sale = await get(`SELECT id FROM sales WHERE id = $1 AND user_id = $2`, [id, user.id]);
     if (!sale) return NextResponse.json({ error: "Venda não encontrada." }, { status: 404 });
 
     const body = await req.json().catch(() => null);

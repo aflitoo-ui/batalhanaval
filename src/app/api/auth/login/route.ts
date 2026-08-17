@@ -24,12 +24,12 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
     return NextResponse.json({ error: "Informe e-mail e senha." }, { status: 400 });
   }
 
-  const user = await get<{ id: number; email: string; passwordHash: string }>(
-    `SELECT id, email, password_hash as "passwordHash" FROM users WHERE email = $1`,
+  const user = await get<{ id: number; email: string; passwordHash: string; active: boolean }>(
+    `SELECT id, email, password_hash as "passwordHash", active FROM users WHERE email = $1`,
     [email]
   );
 
-  if (!user || !verifyPassword(password, user.passwordHash)) {
+  if (!user || !user.active || !verifyPassword(password, user.passwordHash)) {
     recordRateLimitFailure(rateLimitKey, RATE_LIMIT_OPTS);
     return NextResponse.json({ error: "E-mail ou senha incorretos." }, { status: 401 });
   }

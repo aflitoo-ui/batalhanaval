@@ -40,8 +40,11 @@ export const PATCH = withApiErrors(
     if (fields.length === 0) {
       return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
     }
-    params.push(id);
-    await run(`UPDATE sales SET ${fields.join(", ")} WHERE id = $${i}`, params);
+    params.push(id, user.id);
+    const result = await run(`UPDATE sales SET ${fields.join(", ")} WHERE id = $${i} AND user_id = $${i + 1}`, params);
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: "Venda não encontrada." }, { status: 404 });
+    }
     return NextResponse.json({ ok: true });
   }
 );
@@ -53,7 +56,10 @@ export const DELETE = withApiErrors(
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
     const { id } = await ctx.params;
-    await run(`DELETE FROM sales WHERE id = $1`, [id]);
+    const result = await run(`DELETE FROM sales WHERE id = $1 AND user_id = $2`, [id, user.id]);
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: "Venda não encontrada." }, { status: 404 });
+    }
     return NextResponse.json({ ok: true });
   }
 );
