@@ -17,6 +17,7 @@ function formatDate(iso: string) {
 
 export function UsuariosClient() {
   const [users, setUsers] = useState<User[]>([]);
+  const [subStatusByUser, setSubStatusByUser] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,11 +26,18 @@ export function UsuariosClient() {
   const [rowError, setRowError] = useState<{ id: number; message: string } | null>(null);
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPassword, setResetPassword] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   async function load() {
-    const res = await fetch("/api/users");
-    const data = await res.json();
-    setUsers(data.users || []);
+    const [usersRes, subsRes] = await Promise.all([fetch("/api/users"), fetch("/api/admin/subscriptions")]);
+    const usersData = await usersRes.json();
+    const subsData = await subsRes.json().catch(() => null);
+    setUsers(usersData.users || []);
+    const map: Record<number, string> = {};
+    for (const s of subsData?.subscriptions || []) {
+      if (s.status) map[s.userId] = s.status;
+    }
+    setSubStatusByUser(map);
     setLoading(false);
   }
 
@@ -73,6 +81,35 @@ export function UsuariosClient() {
       setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
       return;
     }
+    load();
+  }
+
+  async function toggleGrant(u: User) {
+    setRowError(null);
+    const isGranted = subStatusByUser[u.id] === "granted";
+    const res = await fetch(`/api/admin/subscriptions/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: isGranted ? "revoke" : "grant" }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
+      return;
+    }
+    load();
+  }
+
+  async function handleDelete(u: User) {
+    setRowError(null);
+    const res = await fetch(`/api/users/${u.id}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setRowError({ id: u.id, message: data?.error || "Erro ao excluir." });
+      setConfirmDeleteId(null);
+      return;
+    }
+    setConfirmDeleteId(null);
     load();
   }
 
@@ -140,11 +177,12 @@ export function UsuariosClient() {
       <div className="overflow-x-auto rounded-lg border border-zinc-800">
         <table className="w-full table-fixed text-sm">
           <colgroup>
-            <col className="w-[35%]" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[20%]" />
+            <col className="w-[24%]" />
+            <col className="w-[9%]" />
+            <col className="w-[11%]" />
+            <col className="w-[13%]" />
+            <col className="w-[11%]" />
+            <col className="w-[32%]" />
           </colgroup>
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -152,13 +190,14 @@ export function UsuariosClient() {
               <th className="px-4 py-2">Papel</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2">Desde</th>
+              <th className="px-4 py-2">Acesso</th>
               <th className="px-4 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
+                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
                   Carregando...
                 </td>
               </tr>
@@ -177,11 +216,30 @@ export function UsuariosClient() {
                     </span>
                   </td>
                   <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
+                  <td className="px-4 py-2 text-zinc-400">
+                    {u.role === "admin" ? "-" : subStatusByUser[u.id] === "granted" ? "Liberado" : "Pago"}
+                  </td>
                   <td className="px-4 py-2">
                     {u.role === "admin" ? (
                       <span className="text-xs text-zinc-600">você</span>
+                    ) : confirmDeleteId === u.id ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <span className="text-xs text-zinc-400">Excluir de vez (perde os dados)?</span>
+                        <button
+                          onClick={() => handleDelete(u)}
+                          className="text-xs font-medium text-red-400 hover:text-red-300"
+                        >
+                          sim
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                        >
+                          não
+                        </button>
+                      </div>
                     ) : resetId === u.id ? (
-                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <input
                           value={resetPassword}
                           onChange={(e) => setResetPassword(e.target.value)}
@@ -206,7 +264,13 @@ export function UsuariosClient() {
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          onClick={() => toggleGrant(u)}
+                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                        >
+                          {subStatusByUser[u.id] === "granted" ? "revogar liberação" : "liberar acesso"}
+                        </button>
                         <button
                           onClick={() => setResetId(u.id)}
                           className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
@@ -220,6 +284,12 @@ export function UsuariosClient() {
                           }`}
                         >
                           {u.active ? "desativar" : "reativar"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(u.id)}
+                          className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                        >
+                          excluir
                         </button>
                       </div>
                     )}

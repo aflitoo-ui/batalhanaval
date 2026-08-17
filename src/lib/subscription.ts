@@ -3,7 +3,7 @@ import type { CurrentUser } from "@/lib/auth";
 
 export type AccessStatus = {
   allowed: boolean;
-  status: "trialing" | "active" | "pending" | "past_due" | "canceled" | "expired" | "none";
+  status: "trialing" | "active" | "granted" | "pending" | "past_due" | "canceled" | "expired" | "none";
   daysLeft?: number;
 };
 
@@ -21,6 +21,11 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
   );
 
   if (!sub) return { allowed: false, status: "none" };
+
+  if (sub.status === "granted") {
+    // Liberado manualmente pelo admin — acesso permanente, sem checar prazo.
+    return { allowed: true, status: "granted" };
+  }
 
   if (sub.status === "trialing") {
     const trialEnd = sub.trialEndsAt ? new Date(sub.trialEndsAt) : null;

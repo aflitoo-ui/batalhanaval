@@ -48,3 +48,25 @@ export const PATCH = withApiErrors(
     return NextResponse.json({ ok: true });
   }
 );
+
+export const DELETE = withApiErrors(
+  "users.DELETE",
+  async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    if (user.role !== "admin") return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
+
+    const { id } = await ctx.params;
+    if (Number(id) === user.id) {
+      return NextResponse.json({ error: "Você não pode excluir a própria conta." }, { status: 400 });
+    }
+
+    // Apaga em cascata produtos, vendas, assinatura e sessões desse usuário
+    // (chaves estrangeiras com ON DELETE CASCADE) — ação irreversível.
+    const result = await run(`DELETE FROM users WHERE id = $1`, [id]);
+    if (result.rowCount === 0) {
+      return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+);

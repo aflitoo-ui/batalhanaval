@@ -138,7 +138,7 @@ export default function ProdutosPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-40 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            placeholder="Ex: Gelo"
+            placeholder="Ex: Água"
           />
         </div>
         <div>
@@ -147,7 +147,7 @@ export default function ProdutosPage() {
             value={buyPrice}
             onChange={(e) => setBuyPrice(e.target.value)}
             className="w-32 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            placeholder="70,00"
+            placeholder="0,00"
             inputMode="decimal"
           />
         </div>
@@ -157,7 +157,7 @@ export default function ProdutosPage() {
             value={sellPrice}
             onChange={(e) => setSellPrice(e.target.value)}
             className="w-32 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            placeholder="120,00"
+            placeholder="0,00"
             inputMode="decimal"
           />
         </div>
