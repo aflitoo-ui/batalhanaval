@@ -184,7 +184,7 @@ export default function RelatoriosPage() {
           ))}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-sm">
+          <table className="w-full min-w-[480px] table-fixed text-sm">
             <colgroup>
               <col className="w-[30%]" />
               <col className="w-[17.5%]" />
@@ -237,7 +237,7 @@ export default function RelatoriosPage() {
           ))}
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-sm">
+          <table className="w-full min-w-[480px] table-fixed text-sm">
             <colgroup>
               <col className="w-[30%]" />
               <col className="w-[17.5%]" />

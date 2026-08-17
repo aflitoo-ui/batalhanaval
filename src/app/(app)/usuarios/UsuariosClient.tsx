@@ -174,6 +174,110 @@ export function UsuariosClient() {
     setResetPassword("");
   }
 
+  function renderActions(u: User, align: "start" | "end") {
+    const justify = align === "end" ? "justify-end" : "justify-start";
+    if (u.role === "admin") {
+      return <span className="text-xs text-zinc-600">você</span>;
+    }
+    if (confirmDeleteId === u.id) {
+      return (
+        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+          <span className="text-xs text-zinc-400">Excluir de vez (perde os dados)?</span>
+          <button onClick={() => handleDelete(u)} className="text-xs font-medium text-red-400 hover:text-red-300">
+            sim
+          </button>
+          <button
+            onClick={() => setConfirmDeleteId(null)}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            não
+          </button>
+        </div>
+      );
+    }
+    if (grantId === u.id) {
+      return (
+        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+          <input
+            value={grantDays}
+            onChange={(e) => setGrantDays(e.target.value)}
+            className="input w-24 py-1"
+            placeholder="dias (vazio = sempre)"
+            inputMode="numeric"
+            autoFocus
+          />
+          <button onClick={() => handleGrant(u)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
+            liberar
+          </button>
+          <button
+            onClick={() => {
+              setGrantId(null);
+              setGrantDays("");
+            }}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            cancelar
+          </button>
+        </div>
+      );
+    }
+    if (resetId === u.id) {
+      return (
+        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+          <input
+            value={resetPassword}
+            onChange={(e) => setResetPassword(e.target.value)}
+            className="input w-32 py-1"
+            placeholder="nova senha"
+            autoFocus
+          />
+          <button
+            onClick={() => handleResetPassword(u)}
+            className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+          >
+            salvar
+          </button>
+          <button
+            onClick={() => {
+              setResetId(null);
+              setResetPassword("");
+            }}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            cancelar
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+        <button
+          onClick={() => (subStatusByUser[u.id] === "granted" ? handleRevoke(u) : setGrantId(u.id))}
+          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+        >
+          {subStatusByUser[u.id] === "granted" ? "revogar liberação" : "liberar acesso"}
+        </button>
+        <button onClick={() => setResetId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
+          redefinir senha
+        </button>
+        <button
+          onClick={() => toggleActive(u)}
+          className={`text-xs font-medium ${
+            u.active ? "text-zinc-500 hover:text-red-400" : "text-zinc-400 hover:text-emerald-400"
+          }`}
+        >
+          {u.active ? "desativar" : "reativar"}
+        </button>
+        <button
+          onClick={() => setConfirmDeleteId(u.id)}
+          className="text-xs font-medium text-zinc-500 hover:text-red-400"
+        >
+          excluir
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-zinc-100">Usuários</h1>
@@ -190,7 +294,7 @@ export function UsuariosClient() {
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="input w-56"
+            className="input w-full sm:w-56"
             placeholder="cliente@exemplo.com"
             type="email"
           />
@@ -200,7 +304,7 @@ export function UsuariosClient() {
           <input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="input w-44"
+            className="input w-full sm:w-44"
             placeholder="mínimo 8 caracteres"
             type="text"
           />
@@ -222,167 +326,88 @@ export function UsuariosClient() {
         className="input max-w-xs"
       />
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full table-fixed text-sm">
-          <colgroup>
-            <col className="w-[24%]" />
-            <col className="w-[9%]" />
-            <col className="w-[11%]" />
-            <col className="w-[13%]" />
-            <col className="w-[11%]" />
-            <col className="w-[32%]" />
-          </colgroup>
-          <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
-              <th className="px-4 py-2">E-mail</th>
-              <th className="px-4 py-2">Papel</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Desde</th>
-              <th className="px-4 py-2">Acesso</th>
-              <th className="px-4 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                  Carregando...
-                </td>
-              </tr>
-            ) : filteredUsers.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
-                  Nenhum usuário encontrado para essa busca.
-                </td>
-              </tr>
-            ) : (
-              filteredUsers.map((u) => (
-                <tr key={u.id} className="border-b border-zinc-900 last:border-0">
-                  <td className="truncate px-4 py-2 font-medium text-zinc-200">{u.email}</td>
-                  <td className="px-4 py-2 text-zinc-300">{u.role === "admin" ? "Admin" : "Usuário"}</td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
-                      }`}
-                    >
-                      {u.active ? "Ativo" : "Inativo"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
-                  <td className="px-4 py-2 text-zinc-400">
-                    {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
-                  </td>
-                  <td className="px-4 py-2">
-                    {u.role === "admin" ? (
-                      <span className="text-xs text-zinc-600">você</span>
-                    ) : confirmDeleteId === u.id ? (
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <span className="text-xs text-zinc-400">Excluir de vez (perde os dados)?</span>
-                        <button
-                          onClick={() => handleDelete(u)}
-                          className="text-xs font-medium text-red-400 hover:text-red-300"
-                        >
-                          sim
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                        >
-                          não
-                        </button>
-                      </div>
-                    ) : grantId === u.id ? (
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <input
-                          value={grantDays}
-                          onChange={(e) => setGrantDays(e.target.value)}
-                          className="input w-24 py-1"
-                          placeholder="dias (vazio = sempre)"
-                          inputMode="numeric"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleGrant(u)}
-                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                        >
-                          liberar
-                        </button>
-                        <button
-                          onClick={() => {
-                            setGrantId(null);
-                            setGrantDays("");
-                          }}
-                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                        >
-                          cancelar
-                        </button>
-                      </div>
-                    ) : resetId === u.id ? (
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <input
-                          value={resetPassword}
-                          onChange={(e) => setResetPassword(e.target.value)}
-                          className="input w-32 py-1"
-                          placeholder="nova senha"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleResetPassword(u)}
-                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                        >
-                          salvar
-                        </button>
-                        <button
-                          onClick={() => {
-                            setResetId(null);
-                            setResetPassword("");
-                          }}
-                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                        >
-                          cancelar
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        <button
-                          onClick={() => (subStatusByUser[u.id] === "granted" ? handleRevoke(u) : setGrantId(u.id))}
-                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                        >
-                          {subStatusByUser[u.id] === "granted" ? "revogar liberação" : "liberar acesso"}
-                        </button>
-                        <button
-                          onClick={() => setResetId(u.id)}
-                          className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
-                        >
-                          redefinir senha
-                        </button>
-                        <button
-                          onClick={() => toggleActive(u)}
-                          className={`text-xs font-medium ${
-                            u.active ? "text-zinc-500 hover:text-red-400" : "text-zinc-400 hover:text-emerald-400"
-                          }`}
-                        >
-                          {u.active ? "desativar" : "reativar"}
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(u.id)}
-                          className="text-xs font-medium text-zinc-500 hover:text-red-400"
-                        >
-                          excluir
-                        </button>
-                      </div>
-                    )}
-                    {rowError && rowError.id === u.id && (
-                      <p className="mt-1 text-right text-xs text-red-400">{rowError.message}</p>
-                    )}
-                  </td>
+      {loading ? (
+        <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
+      ) : filteredUsers.length === 0 ? (
+        <p className="py-6 text-center text-sm text-zinc-500">Nenhum usuário encontrado para essa busca.</p>
+      ) : (
+        <>
+          {/* Cartões — telas pequenas */}
+          <div className="space-y-3 md:hidden">
+            {filteredUsers.map((u) => (
+              <div key={u.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate font-medium text-zinc-200">{u.email}</p>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
+                    }`}
+                  >
+                    {u.active ? "Ativo" : "Inativo"}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · acesso:{" "}
+                  {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
+                </p>
+                <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
+                {rowError && rowError.id === u.id && <p className="mt-1 text-xs text-red-400">{rowError.message}</p>}
+              </div>
+            ))}
+          </div>
+
+          {/* Tabela — telas médias pra cima */}
+          <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
+            <table className="w-full min-w-[640px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[24%]" />
+                <col className="w-[9%]" />
+                <col className="w-[11%]" />
+                <col className="w-[13%]" />
+                <col className="w-[11%]" />
+                <col className="w-[32%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
+                  <th className="px-4 py-2">E-mail</th>
+                  <th className="px-4 py-2">Papel</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Desde</th>
+                  <th className="px-4 py-2">Acesso</th>
+                  <th className="px-4 py-2"></th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="border-b border-zinc-900 last:border-0">
+                    <td className="truncate px-4 py-2 font-medium text-zinc-200">{u.email}</td>
+                    <td className="px-4 py-2 text-zinc-300">{u.role === "admin" ? "Admin" : "Usuário"}</td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
+                        }`}
+                      >
+                        {u.active ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-2 text-zinc-400">
+                      {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
+                    </td>
+                    <td className="px-4 py-2">
+                      {renderActions(u, "end")}
+                      {rowError && rowError.id === u.id && (
+                        <p className="mt-1 text-right text-xs text-red-400">{rowError.message}</p>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

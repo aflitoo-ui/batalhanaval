@@ -175,7 +175,125 @@ export default function ProdutosPage() {
         <p className="rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">{deleteError}</p>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      {loading ? (
+        <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
+      ) : products.length === 0 ? (
+        <p className="py-6 text-center text-sm text-zinc-500">Nenhum produto cadastrado ainda.</p>
+      ) : (
+        <>
+          {/* Cartões — telas pequenas */}
+          <div className="space-y-3 md:hidden">
+            {products.map((p) => (
+              <div key={p.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+                {editId === p.id ? (
+                  <div className="space-y-2">
+                    <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input" autoFocus />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        value={editBuyPrice}
+                        onChange={(e) => setEditBuyPrice(e.target.value)}
+                        className="input"
+                        inputMode="decimal"
+                        placeholder="Compra"
+                      />
+                      <input
+                        value={editSellPrice}
+                        onChange={(e) => setEditSellPrice(e.target.value)}
+                        className="input"
+                        inputMode="decimal"
+                        placeholder="Venda"
+                      />
+                    </div>
+                    {editError && <p className="text-xs text-red-400">{editError}</p>}
+                    <div className="flex justify-end gap-3">
+                      <button
+                        onClick={() => handleSaveEdit(p)}
+                        disabled={editSaving}
+                        className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-60"
+                      >
+                        salvar
+                      </button>
+                      <button
+                        onClick={() => setEditId(null)}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                      >
+                        cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-zinc-200">{p.name}</p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          p.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
+                        }`}
+                      >
+                        {p.active ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-[11px] text-zinc-500">Compra</p>
+                        <p className="text-zinc-300">{formatBRL(p.defaultBuyPrice)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-zinc-500">Venda</p>
+                        <p className="text-zinc-300">{formatBRL(p.defaultSellPrice)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-end gap-3 border-t border-zinc-800 pt-2">
+                      {confirmDeleteId === p.id ? (
+                        <>
+                          <span className="text-xs text-zinc-400">Excluir?</span>
+                          <button
+                            onClick={() => handleDelete(p)}
+                            className="text-xs font-medium text-red-400 hover:text-red-300"
+                          >
+                            sim
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                          >
+                            não
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => startEdit(p)}
+                            className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+                          >
+                            editar
+                          </button>
+                          <button
+                            onClick={() => toggleActive(p)}
+                            className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+                          >
+                            {p.active ? "Desativar" : "Reativar"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteError(null);
+                              setConfirmDeleteId(p.id);
+                            }}
+                            className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                          >
+                            excluir
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Tabela — telas médias pra cima */}
+          <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -187,20 +305,7 @@ export default function ProdutosPage() {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
-                  Carregando...
-                </td>
-              </tr>
-            ) : products.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-zinc-500">
-                  Nenhum produto cadastrado ainda.
-                </td>
-              </tr>
-            ) : (
-              products.map((p) =>
+              {products.map((p) =>
                 editId === p.id ? (
                   <tr key={p.id} className="border-b border-zinc-900 bg-zinc-900/40 last:border-0">
                     <td className="px-4 py-2">
@@ -316,11 +421,12 @@ export default function ProdutosPage() {
                     </td>
                   </tr>
                 )
-              )
-            )}
+              )}
           </tbody>
         </table>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

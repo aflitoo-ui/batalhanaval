@@ -111,95 +111,159 @@ export default function VendasPage() {
         className="input max-w-xs"
       />
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
-              <th className="px-3 py-2">Data</th>
-              <th className="px-3 py-2">Produto</th>
-              <th className="px-3 py-2 text-right">Qtd</th>
-              <th className="px-3 py-2 text-right">QP</th>
-              <th className="px-3 py-2 text-right">QV</th>
-              <th className="px-3 py-2 text-right">Total</th>
-              <th className="px-3 py-2 text-right">Pagou</th>
-              <th className="px-3 py-2 text-right">Deve</th>
-              <th className="px-3 py-2 text-right">Lucro</th>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={11} className="px-4 py-6 text-center text-zinc-500">
-                  Carregando...
-                </td>
-              </tr>
-            ) : filteredSales.length === 0 ? (
-              <tr>
-                <td colSpan={11} className="px-4 py-6 text-center text-zinc-500">
-                  {sales.length === 0 ? "Nenhuma venda lançada ainda." : "Nenhuma venda encontrada para essa busca."}
-                </td>
-              </tr>
-            ) : (
-              filteredSales.map((s) => (
-                <tr key={s.id} className="border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50">
-                  <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
-                  <td className="px-3 py-2 font-medium text-zinc-200">{s.productName}</td>
-                  <td className="px-3 py-2 text-right text-zinc-300">{s.quantity}</td>
-                  <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
-                  <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
-                  <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.total)}</td>
-                  <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
-                  <td className="px-3 py-2 text-right font-medium text-red-400">
-                    {s.owed > 0 ? formatBRL(s.owed) : "-"}
-                  </td>
-                  <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
-                  <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                      {confirmDeleteId === s.id ? (
-                        <>
-                          <span className="text-xs text-zinc-400">Excluir?</span>
-                          <button
-                            onClick={() => handleDeleteSale(s.id)}
-                            className="text-xs font-medium text-red-400 hover:text-red-300"
-                          >
-                            sim
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                          >
-                            não
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {s.owed > 0 && (
-                            <button
-                              onClick={() => setPaymentSaleId(s.id)}
-                              className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-                            >
-                              + pagamento
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setConfirmDeleteId(s.id)}
-                            className="text-xs font-medium text-zinc-500 hover:text-red-400"
-                          >
-                            excluir
-                          </button>
-                        </>
+      {loading ? (
+        <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
+      ) : filteredSales.length === 0 ? (
+        <p className="py-6 text-center text-sm text-zinc-500">
+          {sales.length === 0 ? "Nenhuma venda lançada ainda." : "Nenhuma venda encontrada para essa busca."}
+        </p>
+      ) : (
+        <>
+          {/* Cartões — telas pequenas */}
+          <div className="space-y-3 md:hidden">
+            {filteredSales.map((s) => (
+              <div key={s.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-medium text-amber-400">{s.customerName}</p>
+                    <p className="text-xs text-zinc-500">
+                      {formatDate(s.saleDate)} · {s.productName} · {s.quantity}x
+                    </p>
+                  </div>
+                  <p className="text-right text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Pagou</p>
+                    <p className="text-emerald-400">{formatBRL(s.paid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Deve</p>
+                    <p className="font-medium text-red-400">{s.owed > 0 ? formatBRL(s.owed) : "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Lucro</p>
+                    <p className="text-zinc-200">{formatBRL(s.profit)}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-end gap-3 border-t border-zinc-800 pt-2">
+                  {confirmDeleteId === s.id ? (
+                    <>
+                      <span className="text-xs text-zinc-400">Excluir?</span>
+                      <button
+                        onClick={() => handleDeleteSale(s.id)}
+                        className="text-xs font-medium text-red-400 hover:text-red-300"
+                      >
+                        sim
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                      >
+                        não
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {s.owed > 0 && (
+                        <button
+                          onClick={() => setPaymentSaleId(s.id)}
+                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                        >
+                          + pagamento
+                        </button>
                       )}
-                    </div>
-                  </td>
+                      <button
+                        onClick={() => setConfirmDeleteId(s.id)}
+                        className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                      >
+                        excluir
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tabela — telas médias pra cima */}
+          <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
+                  <th className="px-3 py-2">Data</th>
+                  <th className="px-3 py-2">Produto</th>
+                  <th className="px-3 py-2 text-right">Qtd</th>
+                  <th className="px-3 py-2 text-right">QP</th>
+                  <th className="px-3 py-2 text-right">QV</th>
+                  <th className="px-3 py-2 text-right">Total</th>
+                  <th className="px-3 py-2 text-right">Pagou</th>
+                  <th className="px-3 py-2 text-right">Deve</th>
+                  <th className="px-3 py-2 text-right">Lucro</th>
+                  <th className="px-3 py-2">Cliente</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {filteredSales.map((s) => (
+                  <tr key={s.id} className="border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50">
+                    <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
+                    <td className="px-3 py-2 font-medium text-zinc-200">{s.productName}</td>
+                    <td className="px-3 py-2 text-right text-zinc-300">{s.quantity}</td>
+                    <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
+                    <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
+                    <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.total)}</td>
+                    <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
+                    <td className="px-3 py-2 text-right font-medium text-red-400">
+                      {s.owed > 0 ? formatBRL(s.owed) : "-"}
+                    </td>
+                    <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
+                    <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                        {confirmDeleteId === s.id ? (
+                          <>
+                            <span className="text-xs text-zinc-400">Excluir?</span>
+                            <button
+                              onClick={() => handleDeleteSale(s.id)}
+                              className="text-xs font-medium text-red-400 hover:text-red-300"
+                            >
+                              sim
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                            >
+                              não
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {s.owed > 0 && (
+                              <button
+                                onClick={() => setPaymentSaleId(s.id)}
+                                className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                              >
+                                + pagamento
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setConfirmDeleteId(s.id)}
+                              className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                            >
+                              excluir
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {showNewSale && (
         <NewSaleModal
@@ -327,7 +391,7 @@ function NewSaleModal({
   return (
     <ModalShell title="Nova venda" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data">
             <input
               type="date"
@@ -359,7 +423,7 @@ function NewSaleModal({
             autoFocus
           />
         </Field>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Quantidade">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
           </Field>
@@ -427,7 +491,7 @@ function PaymentModal({ sale, onClose, onSaved }: { sale: Sale; onClose: () => v
         Deve atualmente: <span className="font-medium text-red-400">{formatBRL(sale.owed)}</span>
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Valor pago">
             <input
               value={amount}

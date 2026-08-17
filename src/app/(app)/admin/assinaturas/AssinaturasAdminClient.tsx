@@ -85,7 +85,7 @@ export function AssinaturasAdminClient() {
       />
 
       <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full table-fixed text-sm">
+        <table className="w-full min-w-[560px] table-fixed text-sm">
           <colgroup>
             <col className="w-[30%]" />
             <col className="w-[20%]" />
