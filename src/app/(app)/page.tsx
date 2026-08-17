@@ -59,6 +59,7 @@ export default function VendasPage() {
   const [editSaleId, setEditSaleId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [onlyOwed, setOnlyOwed] = useState(false);
 
   async function load() {
     const [salesRes, productsRes, customersRes] = await Promise.all([
@@ -81,9 +82,10 @@ export default function VendasPage() {
 
   const filteredSales = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return sales;
-    return sales.filter((s) => (s.customerName || "").toLowerCase().includes(q));
-  }, [sales, search]);
+    return sales
+      .filter((s) => !q || (s.customerName || "").toLowerCase().includes(q))
+      .filter((s) => !onlyOwed || s.owed > 0);
+  }, [sales, search, onlyOwed]);
 
   const totals = useMemo(() => {
     return filteredSales.reduce(
@@ -163,12 +165,24 @@ export default function VendasPage() {
         <SummaryCard label="Lucro" value={formatBRL(totals.profit)} tone="emerald" />
       </div>
 
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por cliente..."
-        className="input max-w-xs"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por cliente..."
+          className="input max-w-xs"
+        />
+        <button
+          onClick={() => setOnlyOwed((v) => !v)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+            onlyOwed
+              ? "bg-red-950 text-red-400"
+              : "bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+          }`}
+        >
+          Só quem deve
+        </button>
+      </div>
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
