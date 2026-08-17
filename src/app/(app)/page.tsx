@@ -246,10 +246,8 @@ export default function VendasPage() {
               setArchiveBlockedMsg(null);
               setShowArchiveMonth(true);
             }}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-              totals.owed > 0
-                ? "bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
-                : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-amber-400"
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-900 ${
+              totals.owed > 0 ? "hover:text-zinc-300" : "hover:text-amber-400"
             }`}
           >
             {totals.owed > 0 && "🔒"} arquivar {MONTH_NAMES[viewMonth.month].toLowerCase()} inteiro
