@@ -843,7 +843,7 @@ function CustomerPicker({
           setCreateError(null);
           if (value) onChange(null);
         }}
-        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         className="input"
         placeholder="Buscar ou criar cliente..."

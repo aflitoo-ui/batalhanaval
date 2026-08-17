@@ -118,7 +118,7 @@ export default function ClientesPage() {
       <div className="flex items-baseline gap-2">
         <h1 className="text-xl font-bold text-zinc-100">Clientes</h1>
         {!loading && (
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm font-medium text-zinc-400">
             {customers.length} {customers.length === 1 ? "cliente" : "clientes"}
             {activeCount !== customers.length && ` (${activeCount} ativo${activeCount === 1 ? "" : "s"})`}
           </span>
