@@ -889,14 +889,16 @@ function CustomerPicker({
         }}
         onClick={() => setOpen(true)}
         onKeyDown={(e) => {
-          if (e.key !== "Enter") return;
-          e.preventDefault();
+          if (e.key !== "Enter" && e.key !== "Tab") return;
           const exact = customers.find((c) => c.name.toLowerCase() === q);
-          if (exact) {
-            selectCustomer(exact);
-          } else if (filtered.length > 0) {
-            selectCustomer(filtered[0]);
-          } else if (q) {
+          const match = exact || filtered[0];
+          if (match) {
+            // Tab só completa (e continua pro próximo campo, comportamento
+            // normal de tab); Enter também cria o cliente se não achar nada.
+            if (e.key === "Enter") e.preventDefault();
+            selectCustomer(match);
+          } else if (e.key === "Enter" && q) {
+            e.preventDefault();
             handleCreate();
           }
         }}
