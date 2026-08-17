@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type User = {
   id: number;
@@ -27,6 +27,13 @@ export function UsuariosClient() {
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => u.email.toLowerCase().includes(q));
+  }, [users, search]);
 
   async function load() {
     const [usersRes, subsRes] = await Promise.all([fetch("/api/users"), fetch("/api/admin/subscriptions")]);
@@ -174,6 +181,13 @@ export function UsuariosClient() {
         {error && <p className="w-full text-sm text-red-400">{error}</p>}
       </form>
 
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar por e-mail..."
+        className="input max-w-xs"
+      />
+
       <div className="overflow-x-auto rounded-lg border border-zinc-800">
         <table className="w-full table-fixed text-sm">
           <colgroup>
@@ -201,8 +215,14 @@ export function UsuariosClient() {
                   Carregando...
                 </td>
               </tr>
+            ) : filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-6 text-center text-zinc-500">
+                  Nenhum usuário encontrado para essa busca.
+                </td>
+              </tr>
             ) : (
-              users.map((u) => (
+              filteredUsers.map((u) => (
                 <tr key={u.id} className="border-b border-zinc-900 last:border-0">
                   <td className="truncate px-4 py-2 font-medium text-zinc-200">{u.email}</td>
                   <td className="px-4 py-2 text-zinc-300">{u.role === "admin" ? "Admin" : "Usuário"}</td>
