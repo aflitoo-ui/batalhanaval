@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS payments (
   sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
   amount NUMERIC(12,2) NOT NULL,
   paid_at DATE NOT NULL,
+  notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -162,4 +163,7 @@ UPDATE sales s SET customer_id = c.id
   WHERE s.customer_id IS NULL AND c.user_id = s.user_id AND c.name = s.customer_name;
 
 ALTER TABLE sales ALTER COLUMN customer_name DROP NOT NULL;
+
+-- Observação por pagamento (ex: "recebi 20 no dinheiro e 100 no pix").
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS notes TEXT;
 `;

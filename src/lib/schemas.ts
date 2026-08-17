@@ -29,6 +29,7 @@ export const customerSchema = z.object({
 export const paymentSchema = z.object({
   amount: z.number().positive(),
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+  notes: z.string().trim().max(500).optional().nullable(),
 });
 
 export const createUserSchema = z.object({

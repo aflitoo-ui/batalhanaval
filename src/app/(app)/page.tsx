@@ -34,7 +34,7 @@ type Sale = {
   profit: number;
 };
 
-type PaymentEntry = { id: number; amount: number; paidAt: string };
+type PaymentEntry = { id: number; amount: number; paidAt: string; notes: string | null };
 
 function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -634,6 +634,7 @@ function PaymentsModal({
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [amount, setAmount] = useState("");
   const [paidAt, setPaidAt] = useState(todayISO());
+  const [paymentNotes, setPaymentNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -664,7 +665,7 @@ function PaymentsModal({
     const res = await fetch(`/api/sales/${sale.id}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: value, paidAt }),
+      body: JSON.stringify({ amount: value, paidAt, notes: paymentNotes.trim() || undefined }),
     });
     const data = await res.json();
     setSaving(false);
@@ -708,39 +709,39 @@ function PaymentsModal({
         ) : history.length === 0 ? (
           <p className="text-sm text-zinc-500">Nenhum pagamento registrado ainda.</p>
         ) : (
-          <ul className="max-h-40 space-y-1.5 overflow-y-auto">
+          <ul className="max-h-48 space-y-1.5 overflow-y-auto">
             {history.map((h) => (
-              <li
-                key={h.id}
-                className="flex items-center justify-between rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm"
-              >
-                <span className="text-zinc-400">{formatDate(h.paidAt)}</span>
-                <span className="text-emerald-400">{formatBRL(h.amount)}</span>
-                {confirmDeleteId === h.id ? (
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-xs text-zinc-500">Remover?</span>
+              <li key={h.id} className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">{formatDate(h.paidAt)}</span>
+                  <span className="text-emerald-400">{formatBRL(h.amount)}</span>
+                  {confirmDeleteId === h.id ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-xs text-zinc-500">Remover?</span>
+                      <button
+                        onClick={() => handleDeletePayment(h.id)}
+                        disabled={deletingId === h.id}
+                        className="text-xs font-medium text-red-400 hover:text-red-300 disabled:opacity-60"
+                      >
+                        {deletingId === h.id ? "..." : "sim"}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                      >
+                        não
+                      </button>
+                    </span>
+                  ) : (
                     <button
-                      onClick={() => handleDeletePayment(h.id)}
-                      disabled={deletingId === h.id}
-                      className="text-xs font-medium text-red-400 hover:text-red-300 disabled:opacity-60"
+                      onClick={() => setConfirmDeleteId(h.id)}
+                      className="text-xs font-medium text-zinc-500 hover:text-red-400"
                     >
-                      {deletingId === h.id ? "..." : "sim"}
+                      remover
                     </button>
-                    <button
-                      onClick={() => setConfirmDeleteId(null)}
-                      className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                    >
-                      não
-                    </button>
-                  </span>
-                ) : (
-                  <button
-                    onClick={() => setConfirmDeleteId(h.id)}
-                    className="text-xs font-medium text-zinc-500 hover:text-red-400"
-                  >
-                    remover
-                  </button>
-                )}
+                  )}
+                </div>
+                {h.notes && <p className="mt-1 text-xs italic text-zinc-500">{h.notes}</p>}
               </li>
             ))}
           </ul>
@@ -756,7 +757,7 @@ function PaymentsModal({
                 onChange={(e) => setAmount(e.target.value)}
                 className="input"
                 inputMode="decimal"
-                placeholder={String(sale.owed)}
+                placeholder="0"
                 autoFocus
               />
             </Field>
@@ -764,6 +765,14 @@ function PaymentsModal({
               <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className="input" />
             </Field>
           </div>
+          <Field label="Observação (opcional)">
+            <input
+              value={paymentNotes}
+              onChange={(e) => setPaymentNotes(e.target.value)}
+              className="input"
+              placeholder='Ex: "20 no dinheiro e 100 no pix"'
+            />
+          </Field>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
