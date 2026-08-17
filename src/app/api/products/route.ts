@@ -3,6 +3,7 @@ import { all, get } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { productSchema } from "@/lib/schemas";
+import { requireActiveAccess } from "@/lib/subscription";
 
 type ProductRow = {
   id: number;
@@ -15,6 +16,8 @@ type ProductRow = {
 export const GET = withApiErrors("products.GET", async () => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const denied = await requireActiveAccess(user);
+  if (denied) return denied;
 
   const rows = await all<ProductRow>(
     `SELECT id, name, default_buy_price as "defaultBuyPrice", default_sell_price as "defaultSellPrice", active
@@ -33,6 +36,8 @@ export const GET = withApiErrors("products.GET", async () => {
 export const POST = withApiErrors("products.POST", async (req: NextRequest) => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const denied = await requireActiveAccess(user);
+  if (denied) return denied;
 
   const body = await req.json().catch(() => null);
   const parsed = productSchema.safeParse(body);

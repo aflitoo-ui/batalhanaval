@@ -3,12 +3,15 @@ import { all, get } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { paymentSchema } from "@/lib/schemas";
+import { requireActiveAccess } from "@/lib/subscription";
 
 export const GET = withApiErrors(
   "sales.payments.GET",
   async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const denied = await requireActiveAccess(user);
+    if (denied) return denied;
 
     const { id } = await ctx.params;
     const sale = await get(`SELECT id FROM sales WHERE id = $1 AND user_id = $2`, [id, user.id]);
@@ -29,6 +32,8 @@ export const POST = withApiErrors(
   async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const denied = await requireActiveAccess(user);
+    if (denied) return denied;
 
     const { id } = await ctx.params;
     const sale = await get(`SELECT id FROM sales WHERE id = $1 AND user_id = $2`, [id, user.id]);

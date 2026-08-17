@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
+import { requireActiveAccess } from "@/lib/subscription";
 
 export const DELETE = withApiErrors(
   "payments.DELETE",
   async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const denied = await requireActiveAccess(user);
+    if (denied) return denied;
 
     const { id } = await ctx.params;
     const result = await run(

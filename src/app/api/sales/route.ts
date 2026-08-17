@@ -3,6 +3,7 @@ import { all, get, withTransaction } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { saleSchema } from "@/lib/schemas";
+import { requireActiveAccess } from "@/lib/subscription";
 
 type SaleRow = {
   id: number;
@@ -62,6 +63,8 @@ function round2(n: number) {
 export const GET = withApiErrors("sales.GET", async () => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const denied = await requireActiveAccess(user);
+  if (denied) return denied;
 
   const rows = await all<SaleRow>(LIST_SQL, [user.id]);
   return NextResponse.json({ sales: rows.map(toSaleView) });
@@ -70,6 +73,8 @@ export const GET = withApiErrors("sales.GET", async () => {
 export const POST = withApiErrors("sales.POST", async (req: NextRequest) => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const denied = await requireActiveAccess(user);
+  if (denied) return denied;
 
   const body = await req.json().catch(() => null);
   const parsed = saleSchema.safeParse(body);

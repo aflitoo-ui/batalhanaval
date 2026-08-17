@@ -3,12 +3,15 @@ import { run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { productSchema } from "@/lib/schemas";
+import { requireActiveAccess } from "@/lib/subscription";
 
 export const PATCH = withApiErrors(
   "products.PATCH",
   async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const denied = await requireActiveAccess(user);
+    if (denied) return denied;
 
     const { id } = await ctx.params;
     const body = await req.json().catch(() => null);
@@ -53,6 +56,8 @@ export const DELETE = withApiErrors(
   async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    const denied = await requireActiveAccess(user);
+    if (denied) return denied;
 
     const { id } = await ctx.params;
     try {

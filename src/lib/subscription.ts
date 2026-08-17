@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { get } from "@/db/pool";
 import type { CurrentUser } from "@/lib/auth";
 
@@ -59,4 +60,20 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
   }
 
   return { allowed: false, status: sub.status };
+}
+
+/**
+ * Barreira pras rotas de API que mexem em dados do usuário (produtos,
+ * vendas, pagamentos) — a tela já bloqueia via redirect, mas isso sozinho
+ * não impede uma chamada direta à API (ex: navegação em cache do
+ * Next.js, ou alguém chamando a API na mão) enquanto a sessão de login
+ * ainda for válida. Devolve null se pode seguir, ou a resposta 403 pronta.
+ */
+export async function requireActiveAccess(user: CurrentUser): Promise<NextResponse | null> {
+  const access = await getAccessStatus(user);
+  if (access.allowed) return null;
+  return NextResponse.json(
+    { error: "Sua assinatura não está ativa. Assine para continuar usando o STRIX.", code: "subscription_required" },
+    { status: 403 }
+  );
 }
