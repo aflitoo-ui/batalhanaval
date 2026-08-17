@@ -93,6 +93,7 @@ export default function VendasPage() {
   const [search, setSearch] = useState("");
   const [onlyOwed, setOnlyOwed] = useState(false);
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
+  const [showArchiveMonth, setShowArchiveMonth] = useState(false);
 
   async function load() {
     const [salesRes, productsRes, customersRes] = await Promise.all([
@@ -228,6 +229,17 @@ export default function VendasPage() {
           ▶
         </button>
       </div>
+
+      {!onlyOwed && filteredSales.length > 0 && totals.owed === 0 && (
+        <p className="text-center">
+          <button
+            onClick={() => setShowArchiveMonth(true)}
+            className="text-xs font-medium text-zinc-600 hover:text-amber-400"
+          >
+            arquivar {MONTH_NAMES[viewMonth.month].toLowerCase()} inteiro
+          </button>
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="Total vendido" value={formatBRL(totals.total)} />
@@ -396,6 +408,21 @@ export default function VendasPage() {
           onRefresh={load}
         />
       )}
+
+      {showArchiveMonth && (
+        <ArchiveMonthModal
+          monthLabel={`${MONTH_NAMES[viewMonth.month]} de ${viewMonth.year}`}
+          count={filteredSales.length}
+          total={totals.total}
+          year={viewMonth.year}
+          month={viewMonth.month + 1}
+          onClose={() => setShowArchiveMonth(false)}
+          onArchived={() => {
+            setShowArchiveMonth(false);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -423,6 +450,68 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
         {children}
       </div>
     </div>
+  );
+}
+
+function ArchiveMonthModal({
+  monthLabel,
+  count,
+  total,
+  year,
+  month,
+  onClose,
+  onArchived,
+}: {
+  monthLabel: string;
+  count: number;
+  total: number;
+  year: number;
+  month: number;
+  onClose: () => void;
+  onArchived: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+
+  async function handleArchive() {
+    setArchiving(true);
+    setError(null);
+    const res = await fetch(`/api/sales?year=${year}&month=${month}`, { method: "DELETE" });
+    const data = await res.json().catch(() => null);
+    setArchiving(false);
+    if (!res.ok) {
+      setError(data?.error || "Erro ao arquivar.");
+      return;
+    }
+    onArchived();
+  }
+
+  return (
+    <ModalShell title={`Arquivar ${monthLabel}?`} onClose={onClose}>
+      <p className="text-sm text-zinc-300">
+        <strong>{count}</strong> {count === 1 ? "venda" : "vendas"} desse mês (totalizando{" "}
+        <strong>{formatBRL(total)}</strong>) vão sair da lista de Vendas do dia a dia.
+      </p>
+      <p className="mt-2 text-sm text-zinc-400">
+        Continuam contando nos Relatórios normalmente — nada é apagado de verdade.
+      </p>
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+      <div className="mt-5 flex justify-end gap-3">
+        <button
+          onClick={onClose}
+          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleArchive}
+          disabled={archiving}
+          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-500 disabled:opacity-60"
+        >
+          {archiving ? "Arquivando..." : "Arquivar mês"}
+        </button>
+      </div>
+    </ModalShell>
   );
 }
 

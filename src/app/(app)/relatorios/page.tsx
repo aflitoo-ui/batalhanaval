@@ -110,7 +110,9 @@ export default function RelatoriosPage() {
 
   useEffect(() => {
     void (async () => {
-      const res = await fetch("/api/sales");
+      // Inclui vendas arquivadas — mês arquivado some da lista de Vendas do
+      // dia a dia, mas o histórico financeiro real continua contando aqui.
+      const res = await fetch("/api/sales?includeArchived=1");
       const data = await res.json();
       setSales(data.sales || []);
       setLoading(false);
