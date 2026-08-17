@@ -29,7 +29,8 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
     const grantEnd = new Date(sub.trialEndsAt);
     const daysLeft = Math.ceil((grantEnd.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
     if (grantEnd.getTime() > Date.now()) {
-      return { allowed: true, status: "granted", daysLeft: Math.max(daysLeft, 0) };
+      // Só avisa quando está perto de vencer, mesma regra da assinatura paga.
+      return { allowed: true, status: "granted", daysLeft: daysLeft <= 5 ? Math.max(daysLeft, 0) : undefined };
     }
     return { allowed: false, status: "expired" };
   }
