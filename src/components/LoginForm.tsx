@@ -48,7 +48,7 @@ export function LoginForm() {
               autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-emerald-500"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#946ce0]"
             />
           </div>
           <div>
@@ -59,14 +59,14 @@ export function LoginForm() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-emerald-500"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#946ce0]"
             />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-emerald-600 py-2 font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+            className="w-full rounded-lg bg-[#3c1a7b] py-2 font-medium text-white transition hover:bg-[#5224a8] disabled:opacity-60"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
