@@ -52,6 +52,7 @@ export default function AssinaturaPage() {
   const [error, setError] = useState<string | null>(null);
   const [needsCpfCnpj, setNeedsCpfCnpj] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [info, setInfo] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -68,6 +69,7 @@ export default function AssinaturaPage() {
 
   async function handleSubscribe(force = false) {
     setError(null);
+    setInfo(null);
     if (needsCpfCnpj && cpfCnpj.replace(/\D/g, "").length < 11) {
       setError("Informe um CPF ou CNPJ válido.");
       return;
@@ -89,7 +91,8 @@ export default function AssinaturaPage() {
       setError(data?.error || "Erro ao iniciar assinatura.");
       return;
     }
-    window.location.href = data.checkoutUrl;
+    window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
+    setInfo("Abrimos a fatura em uma nova aba. Depois de pagar, o acesso libera sozinho aqui.");
   }
 
   async function handleLogout() {
@@ -181,6 +184,7 @@ export default function AssinaturaPage() {
               </div>
             )}
 
+            {info && <p className="mt-3 text-sm text-emerald-400">{info}</p>}
             {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
             <div className="mt-5 flex gap-3">
