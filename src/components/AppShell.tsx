@@ -11,6 +11,19 @@ const NAV = [
   { href: "/relatorios", label: "Relatórios" },
 ];
 
+const SUPPORT_URL = "https://t.me/nick_ki";
+
+function SupportLink({ className }: { className: string }) {
+  return (
+    <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer" className={className}>
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+        <path d="M21.5 3.5 2.7 10.9c-1.3.5-1.3 1.2-.2 1.6l4.8 1.5 1.9 5.7c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.3-2.2 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.7c.3-1.2-.4-1.7-1.4-1.3ZM8.8 13.5l9.5-6c.5-.3.9-.1.6.2l-8 7.4-.3 3.1-1.4-4.1Z" />
+      </svg>
+      Suporte
+    </a>
+  );
+}
+
 function subscriptionStatusMessage(status: string | undefined, daysLeft: number) {
   const dias = `${daysLeft} dia${daysLeft === 1 ? "" : "s"}`;
   if (status === "canceled") {
@@ -90,6 +103,7 @@ export default function AppShell({
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <span className="text-sm text-zinc-500">{user.email}</span>
+            <SupportLink className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200" />
             <button
               onClick={handleLogout}
               className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
@@ -132,12 +146,15 @@ export default function AppShell({
             </nav>
             <div className="mt-3 flex items-center justify-between border-t border-zinc-800 pt-3">
               <span className="truncate text-sm text-zinc-500">{user.email}</span>
-              <button
-                onClick={handleLogout}
-                className="shrink-0 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
-              >
-                Sair
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                <SupportLink className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200" />
+                <button
+                  onClick={handleLogout}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+                >
+                  Sair
+                </button>
+              </div>
             </div>
           </div>
         )}

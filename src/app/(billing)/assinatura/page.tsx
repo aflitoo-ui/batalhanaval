@@ -131,12 +131,22 @@ export default function AssinaturaPage() {
             </Link>
           )}
         </div>
-        <button
-          onClick={handleLogout}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
-        >
-          Sair
-        </button>
+        <div className="flex items-center gap-1">
+          <a
+            href="https://t.me/nick_ki"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+          >
+            Suporte
+          </a>
+          <button
+            onClick={handleLogout}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+          >
+            Sair
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
