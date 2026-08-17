@@ -25,6 +25,7 @@ function formatDate(iso: string | null) {
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Teste grátis",
   active: "Ativa",
+  granted: "Liberada",
   pending: "Aguardando pagamento",
   past_due: "Inadimplente",
   canceled: "Cancelada",

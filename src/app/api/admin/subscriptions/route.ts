@@ -39,7 +39,7 @@ export const GET = withApiErrors("admin.subscriptions.GET", async () => {
   const summary = rows.reduce(
     (acc, r) => {
       acc.total++;
-      if (r.status === "active" || r.status === "trialing") acc.ativos++;
+      if (r.status === "active" || r.status === "trialing" || r.status === "granted") acc.ativos++;
       else if (r.status === "canceled" || r.status === "expired") acc.cancelados++;
       else if (r.status === "past_due") acc.inadimplentes++;
       return acc;

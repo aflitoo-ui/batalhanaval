@@ -4,7 +4,10 @@ import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { z } from "zod";
 
-const bodySchema = z.object({ action: z.enum(["grant", "revoke"]) });
+const bodySchema = z.object({
+  action: z.enum(["grant", "revoke"]),
+  days: z.number().int().positive().max(3650).optional(),
+});
 
 // Libera acesso pra um usuário específico sem cobrar (ex: conta de cortesia)
 // ou desfaz isso depois. Não mexe no gateway de pagamento — é só um estado
@@ -29,8 +32,24 @@ export const PATCH = withApiErrors(
     );
     if (!sub) return NextResponse.json({ error: "Usuário sem assinatura." }, { status: 404 });
 
-    const newStatus = parsed.data.action === "grant" ? "granted" : "expired";
-    await run(`UPDATE subscriptions SET status = $1, updated_at = now() WHERE id = $2`, [newStatus, sub.id]);
-    return NextResponse.json({ ok: true, status: newStatus });
+    if (parsed.data.action === "revoke") {
+      await run(`UPDATE subscriptions SET status = 'expired', updated_at = now() WHERE id = $1`, [sub.id]);
+      return NextResponse.json({ ok: true, status: "expired" });
+    }
+
+    // "grant" com dias definido reaproveita trial_ends_at como prazo do
+    // acesso liberado; sem dias, fica permanente (trial_ends_at = null).
+    if (parsed.data.days) {
+      await run(
+        `UPDATE subscriptions SET status = 'granted', trial_ends_at = now() + make_interval(days => $2), updated_at = now() WHERE id = $1`,
+        [sub.id, parsed.data.days]
+      );
+    } else {
+      await run(
+        `UPDATE subscriptions SET status = 'granted', trial_ends_at = NULL, updated_at = now() WHERE id = $1`,
+        [sub.id]
+      );
+    }
+    return NextResponse.json({ ok: true, status: "granted" });
   }
 );

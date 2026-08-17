@@ -15,6 +15,17 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("pt-BR");
 }
 
+const ACCESS_LABEL: Record<string, string> = {
+  trialing: "Teste grátis",
+  active: "Pago",
+  granted: "Liberado",
+  pending: "Aguardando pagamento",
+  past_due: "Pagamento atrasado",
+  canceled: "Cancelado",
+  expired: "Bloqueado",
+  none: "Sem assinatura",
+};
+
 export function UsuariosClient() {
   const [users, setUsers] = useState<User[]>([]);
   const [subStatusByUser, setSubStatusByUser] = useState<Record<number, string>>({});
@@ -28,6 +39,8 @@ export function UsuariosClient() {
   const [resetPassword, setResetPassword] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [grantId, setGrantId] = useState<number | null>(null);
+  const [grantDays, setGrantDays] = useState("");
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -91,19 +104,40 @@ export function UsuariosClient() {
     load();
   }
 
-  async function toggleGrant(u: User) {
+  async function handleRevoke(u: User) {
     setRowError(null);
-    const isGranted = subStatusByUser[u.id] === "granted";
     const res = await fetch(`/api/admin/subscriptions/${u.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: isGranted ? "revoke" : "grant" }),
+      body: JSON.stringify({ action: "revoke" }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
       return;
     }
+    load();
+  }
+
+  async function handleGrant(u: User) {
+    setRowError(null);
+    const days = grantDays.trim() ? Number(grantDays) : undefined;
+    if (grantDays.trim() && (!Number.isInteger(days) || (days as number) <= 0)) {
+      setRowError({ id: u.id, message: "Informe um número de dias válido." });
+      return;
+    }
+    const res = await fetch(`/api/admin/subscriptions/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "grant", ...(days ? { days } : {}) }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
+      return;
+    }
+    setGrantId(null);
+    setGrantDays("");
     load();
   }
 
@@ -237,7 +271,7 @@ export function UsuariosClient() {
                   </td>
                   <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
                   <td className="px-4 py-2 text-zinc-400">
-                    {u.role === "admin" ? "-" : subStatusByUser[u.id] === "granted" ? "Liberado" : "Pago"}
+                    {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
                   </td>
                   <td className="px-4 py-2">
                     {u.role === "admin" ? (
@@ -256,6 +290,32 @@ export function UsuariosClient() {
                           className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
                         >
                           não
+                        </button>
+                      </div>
+                    ) : grantId === u.id ? (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <input
+                          value={grantDays}
+                          onChange={(e) => setGrantDays(e.target.value)}
+                          className="input w-24 py-1"
+                          placeholder="dias (vazio = sempre)"
+                          inputMode="numeric"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleGrant(u)}
+                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+                        >
+                          liberar
+                        </button>
+                        <button
+                          onClick={() => {
+                            setGrantId(null);
+                            setGrantDays("");
+                          }}
+                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                        >
+                          cancelar
                         </button>
                       </div>
                     ) : resetId === u.id ? (
@@ -286,7 +346,7 @@ export function UsuariosClient() {
                     ) : (
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         <button
-                          onClick={() => toggleGrant(u)}
+                          onClick={() => (subStatusByUser[u.id] === "granted" ? handleRevoke(u) : setGrantId(u.id))}
                           className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
                         >
                           {subStatusByUser[u.id] === "granted" ? "revogar liberação" : "liberar acesso"}

@@ -34,6 +34,7 @@ function formatDate(iso: string | null) {
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Teste grátis",
   active: "Ativa",
+  granted: "Liberada",
   pending: "Aguardando pagamento",
   past_due: "Pagamento atrasado",
   canceled: "Cancelada",
@@ -170,6 +171,14 @@ export default function AssinaturaPage() {
                       : "Vence hoje."}
                 </p>
               )}
+
+            {subscription.status === "granted" && access?.daysLeft !== undefined && (
+              <p className="mt-3 text-sm text-amber-400">
+                {access.daysLeft > 0
+                  ? `Acesso liberado — termina em ${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"}.`
+                  : "Acesso liberado — termina hoje."}
+              </p>
+            )}
 
             {!access?.allowed && (
               <p className="mt-3 text-sm text-red-400">

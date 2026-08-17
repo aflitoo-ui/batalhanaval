@@ -23,8 +23,15 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
   if (!sub) return { allowed: false, status: "none" };
 
   if (sub.status === "granted") {
-    // Liberado manualmente pelo admin — acesso permanente, sem checar prazo.
-    return { allowed: true, status: "granted" };
+    // Liberado manualmente pelo admin — se ele definiu um prazo (reaproveita
+    // trial_ends_at), respeita; sem prazo definido, é permanente.
+    if (!sub.trialEndsAt) return { allowed: true, status: "granted" };
+    const grantEnd = new Date(sub.trialEndsAt);
+    const daysLeft = Math.ceil((grantEnd.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+    if (grantEnd.getTime() > Date.now()) {
+      return { allowed: true, status: "granted", daysLeft: Math.max(daysLeft, 0) };
+    }
+    return { allowed: false, status: "expired" };
   }
 
   if (sub.status === "trialing") {
