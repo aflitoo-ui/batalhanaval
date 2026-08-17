@@ -37,8 +37,7 @@ export function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-1 text-center text-2xl font-bold tracking-tight text-zinc-100">STRIX</h1>
-        <p className="mb-8 text-center text-sm text-zinc-500">Seu parceiro financeiro</p>
+        <h1 className="mb-8 text-center text-2xl font-bold tracking-tight text-zinc-100">STRIX</h1>
         <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">E-mail</label>
