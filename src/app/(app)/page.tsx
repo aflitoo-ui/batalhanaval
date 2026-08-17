@@ -82,6 +82,9 @@ function currentYearMonth() {
   return { year: d.getFullYear(), month: d.getMonth() };
 }
 
+const ADJUSTMENT_HINT =
+  "Use quando o cliente já te devia algum valor atrasado de antes e você quer somar essa dívida ao total dessa venda. Pode ser negativo (ex: -10) pra descontar em vez de somar.";
+
 export default function VendasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -712,7 +715,14 @@ function NewSaleModal({
             inputMode="decimal"
           />
         </Field>
-        <Field label="Ajuste no total (opcional — some ou desconta, ex: -10 ou 10)">
+        <Field
+          label={
+            <>
+              Ajuste no total (opcional)
+              <InfoTip text={ADJUSTMENT_HINT} />
+            </>
+          }
+        >
           <input
             value={adjustment}
             onChange={(e) => setAdjustment(e.target.value)}
@@ -865,7 +875,14 @@ function EditSaleModal({
             <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
-        <Field label="Ajuste no total (opcional — some ou desconta, ex: -10 ou 10)">
+        <Field
+          label={
+            <>
+              Ajuste no total (opcional)
+              <InfoTip text={ADJUSTMENT_HINT} />
+            </>
+          }
+        >
           <input
             value={adjustment}
             onChange={(e) => setAdjustment(e.target.value)}
@@ -1193,11 +1210,22 @@ function CustomerPicker({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-zinc-400">{label}</span>
+      <span className="mb-1 flex items-center gap-1 text-xs font-medium text-zinc-400">{label}</span>
       {children}
     </label>
+  );
+}
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span
+      title={text}
+      className="inline-flex h-3.5 w-3.5 shrink-0 cursor-help items-center justify-center rounded-full border border-zinc-600 text-[9px] font-bold text-zinc-500"
+    >
+      i
+    </span>
   );
 }
