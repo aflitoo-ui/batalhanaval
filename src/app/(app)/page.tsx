@@ -382,16 +382,16 @@ export default function VendasPage() {
                     <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
                     <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
                     <td className="px-3 py-2 text-right text-zinc-200">
-                      {formatBRL(s.total)}
                       {s.adjustment !== 0 && (
                         <span
-                          className="ml-1 text-xs text-zinc-500"
+                          className="mr-1 text-xs text-zinc-500"
                           title={`Ajuste de ${formatBRL(s.adjustment)} incluído no total`}
                         >
                           ({s.adjustment > 0 ? "+" : ""}
                           {formatBRL(s.adjustment)})
                         </span>
                       )}
+                      {formatBRL(s.total)}
                     </td>
                     <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
                     <td className="px-3 py-2 text-right font-medium text-red-400">
