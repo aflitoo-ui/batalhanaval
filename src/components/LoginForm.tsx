@@ -37,7 +37,7 @@ export function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold tracking-tight text-zinc-100">STRIX</h1>
+        <h1 className="mb-8 text-center text-2xl font-bold tracking-tight text-[#3c1a7b]">STRIX</h1>
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">E-mail</label>
