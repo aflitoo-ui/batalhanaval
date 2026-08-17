@@ -27,6 +27,7 @@ type Sale = {
   quantity: number;
   unitBuyPrice: number;
   unitSellPrice: number;
+  adjustment: number;
   notes: string | null;
   total: number;
   paid: number;
@@ -292,7 +293,15 @@ export default function VendasPage() {
                       {formatDate(s.saleDate)} · {s.productName} · {s.quantity}x
                     </p>
                   </div>
-                  <p className="text-right text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
+                    {s.adjustment !== 0 && (
+                      <p className="text-[11px] text-zinc-500">
+                        ajuste: {s.adjustment > 0 ? "+" : ""}
+                        {formatBRL(s.adjustment)}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {s.notes && <p className="mt-1.5 text-xs italic text-zinc-500">{s.notes}</p>}
                 <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
@@ -349,7 +358,18 @@ export default function VendasPage() {
                     <td className="px-3 py-2 text-right text-zinc-300">{s.quantity}</td>
                     <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
                     <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
-                    <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.total)}</td>
+                    <td className="px-3 py-2 text-right text-zinc-200">
+                      {formatBRL(s.total)}
+                      {s.adjustment !== 0 && (
+                        <span
+                          className="ml-1 text-xs text-zinc-500"
+                          title={`Ajuste de ${formatBRL(s.adjustment)} incluído no total`}
+                        >
+                          ({s.adjustment > 0 ? "+" : ""}
+                          {formatBRL(s.adjustment)})
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
                     <td className="px-3 py-2 text-right font-medium text-red-400">
                       {s.owed > 0 ? formatBRL(s.owed) : "-"}
@@ -535,6 +555,7 @@ function NewSaleModal({
   const [buyPrice, setBuyPrice] = useState(String(products[0]?.defaultBuyPrice ?? ""));
   const [sellPrice, setSellPrice] = useState(String(products[0]?.defaultSellPrice ?? ""));
   const [initialPayment, setInitialPayment] = useState("");
+  const [adjustment, setAdjustment] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -571,11 +592,12 @@ function NewSaleModal({
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
     const payment = initialPayment ? Number(initialPayment.replace(",", ".")) : 0;
+    const adj = adjustment ? Number(adjustment.replace(",", ".")) : 0;
     if (!customer) {
       setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
       return;
     }
-    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv) || Number.isNaN(adj)) {
       setError("Preencha todos os campos corretamente.");
       return;
     }
@@ -590,6 +612,7 @@ function NewSaleModal({
         quantity: qty,
         unitBuyPrice: qp,
         unitSellPrice: qv,
+        adjustment: adj,
         initialPayment: payment,
         notes: notes.trim() || undefined,
       }),
@@ -669,6 +692,15 @@ function NewSaleModal({
             inputMode="decimal"
           />
         </Field>
+        <Field label="Ajuste no total (opcional — some ou desconta, ex: -10 ou 10)">
+          <input
+            value={adjustment}
+            onChange={(e) => setAdjustment(e.target.value)}
+            className="input"
+            placeholder="0,00"
+            inputMode="decimal"
+          />
+        </Field>
         <Field label="Observação (opcional)">
           <textarea
             value={notes}
@@ -713,6 +745,7 @@ function EditSaleModal({
   const [quantity, setQuantity] = useState(String(sale.quantity));
   const [buyPrice, setBuyPrice] = useState(String(sale.unitBuyPrice));
   const [sellPrice, setSellPrice] = useState(String(sale.unitSellPrice));
+  const [adjustment, setAdjustment] = useState(sale.adjustment ? String(sale.adjustment) : "");
   const [notes, setNotes] = useState(sale.notes || "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -736,11 +769,12 @@ function EditSaleModal({
     const qty = Number(quantity.replace(",", "."));
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
+    const adj = adjustment ? Number(adjustment.replace(",", ".")) : 0;
     if (!customer) {
       setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
       return;
     }
-    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv) || Number.isNaN(adj)) {
       setError("Preencha todos os campos corretamente.");
       return;
     }
@@ -755,6 +789,7 @@ function EditSaleModal({
         quantity: qty,
         unitBuyPrice: qp,
         unitSellPrice: qv,
+        adjustment: adj,
         notes: notes.trim() || null,
       }),
     });
@@ -810,6 +845,15 @@ function EditSaleModal({
             <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
+        <Field label="Ajuste no total (opcional — some ou desconta, ex: -10 ou 10)">
+          <input
+            value={adjustment}
+            onChange={(e) => setAdjustment(e.target.value)}
+            className="input"
+            placeholder="0,00"
+            inputMode="decimal"
+          />
+        </Field>
         <Field label="Observação (opcional)">
           <textarea
             value={notes}

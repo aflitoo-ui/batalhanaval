@@ -13,6 +13,7 @@ type SaleRow = {
   quantity: string;
   unitBuyPrice: string;
   unitSellPrice: string;
+  adjustment: string;
   notes: string | null;
   productId: number;
   productName: string;
@@ -24,7 +25,7 @@ function listSql(includeArchived: boolean) {
     SELECT s.id, s.sale_date as "saleDate", s.customer_id as "customerId",
       COALESCE(c.name, s.customer_name) as "customerName",
       s.quantity, s.unit_buy_price as "unitBuyPrice", s.unit_sell_price as "unitSellPrice",
-      s.notes, p.id as "productId", p.name as "productName",
+      s.adjustment, s.notes, p.id as "productId", p.name as "productName",
       COALESCE(pay.total_paid, 0) as "totalPaid"
     FROM sales s
     JOIN products p ON p.id = s.product_id
@@ -41,8 +42,9 @@ function toSaleView(r: SaleRow) {
   const quantity = Number(r.quantity);
   const unitBuyPrice = Number(r.unitBuyPrice);
   const unitSellPrice = Number(r.unitSellPrice);
+  const adjustment = Number(r.adjustment);
   const totalPaid = Number(r.totalPaid);
-  const total = round2(quantity * unitSellPrice);
+  const total = round2(quantity * unitSellPrice + adjustment);
   const cost = round2(quantity * unitBuyPrice);
   return {
     id: r.id,
@@ -54,6 +56,7 @@ function toSaleView(r: SaleRow) {
     quantity,
     unitBuyPrice,
     unitSellPrice,
+    adjustment,
     notes: r.notes,
     total,
     paid: round2(totalPaid),
@@ -101,9 +104,19 @@ export const POST = withApiErrors("sales.POST", async (req: NextRequest) => {
 
   const id = await withTransaction(async (tx) => {
     const sale = await tx.get<{ id: number }>(
-      `INSERT INTO sales (user_id, sale_date, product_id, customer_id, quantity, unit_buy_price, unit_sell_price, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [user.id, d.saleDate, d.productId, d.customerId, d.quantity, d.unitBuyPrice, d.unitSellPrice, d.notes || null]
+      `INSERT INTO sales (user_id, sale_date, product_id, customer_id, quantity, unit_buy_price, unit_sell_price, adjustment, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [
+        user.id,
+        d.saleDate,
+        d.productId,
+        d.customerId,
+        d.quantity,
+        d.unitBuyPrice,
+        d.unitSellPrice,
+        d.adjustment || 0,
+        d.notes || null,
+      ]
     );
     if (d.initialPayment && d.initialPayment > 0 && sale) {
       await tx.get(`INSERT INTO payments (sale_id, amount, paid_at) VALUES ($1, $2, $3)`, [
@@ -137,7 +150,7 @@ export const DELETE = withApiErrors("sales.archiveMonth.DELETE", async (req: Nex
   }
 
   const rows = await all<{ id: number; total: string; totalPaid: string }>(
-    `SELECT s.id, (s.quantity * s.unit_sell_price) as total, COALESCE(pay.total_paid, 0) as "totalPaid"
+    `SELECT s.id, (s.quantity * s.unit_sell_price + s.adjustment) as total, COALESCE(pay.total_paid, 0) as "totalPaid"
      FROM sales s
      LEFT JOIN (SELECT sale_id, SUM(amount) as total_paid FROM payments GROUP BY sale_id) pay ON pay.sale_id = s.id
      WHERE s.user_id = $1 AND s.archived_at IS NULL

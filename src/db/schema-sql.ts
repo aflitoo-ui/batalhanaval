@@ -174,4 +174,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
 -- Arquivar mês: some da lista de Vendas do dia a dia, mas continua contando
 -- nos Relatórios pra não reescrever o histórico financeiro de verdade.
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+-- Ajuste manual no total da venda (pode ser positivo ou negativo) — pra
+-- somar/descontar algo que não é calculado por quantidade x preço, tipo uma
+-- dívida antiga incluída no total. Entra direto no total/deve/lucro.
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS adjustment NUMERIC(12,2) NOT NULL DEFAULT 0;
 `;

@@ -16,6 +16,7 @@ export const saleSchema = z.object({
   unitSellPrice: z.number().min(0),
   notes: z.string().trim().max(500).optional().nullable(),
   initialPayment: z.number().min(0).optional(),
+  adjustment: z.number().optional(),
 });
 
 export const saleUpdateSchema = saleSchema.omit({ initialPayment: true }).partial();

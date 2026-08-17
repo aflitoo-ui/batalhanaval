@@ -34,6 +34,7 @@ export const PATCH = withApiErrors(
       quantity: "quantity",
       unitBuyPrice: "unit_buy_price",
       unitSellPrice: "unit_sell_price",
+      adjustment: "adjustment",
       notes: "notes",
     };
 
