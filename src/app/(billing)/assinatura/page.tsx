@@ -18,6 +18,7 @@ type Subscription = {
   canceledAt: string | null;
   planName: string;
   price: number;
+  daysLeft: number | null;
 };
 
 type HistoryItem = { id: number; amount: number; status: string; paidAt: string | null };
@@ -151,32 +152,25 @@ export default function AssinaturaPage() {
               </span>
             </div>
 
-            {subscription.status === "trialing" && access && (
+            {subscription.daysLeft !== null && (
               <p className="mt-3 text-sm text-amber-400">
-                {access.daysLeft && access.daysLeft > 0
-                  ? `${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"} restante${access.daysLeft === 1 ? "" : "s"} do seu teste grátis.`
-                  : "Seu teste grátis termina hoje."}
-              </p>
-            )}
-
-            {(subscription.status === "active" || subscription.status === "canceled") &&
-              access?.daysLeft !== undefined && (
-                <p className="mt-3 text-sm text-amber-400">
-                  {subscription.status === "canceled"
-                    ? access.daysLeft > 0
-                      ? `Assinatura cancelada — o acesso termina em ${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"}.`
-                      : "Assinatura cancelada — o acesso termina hoje."
-                    : access.daysLeft > 0
-                      ? `Vence em ${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"}.`
-                      : "Vence hoje."}
-                </p>
-              )}
-
-            {subscription.status === "granted" && access?.daysLeft !== undefined && (
-              <p className="mt-3 text-sm text-amber-400">
-                {access.daysLeft > 0
-                  ? `Acesso liberado — termina em ${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"}.`
-                  : "Acesso liberado — termina hoje."}
+                {(() => {
+                  const d = subscription.daysLeft!;
+                  const dias = d > 0 ? `${d} dia${d === 1 ? "" : "s"}` : null;
+                  if (subscription.status === "trialing") {
+                    return dias ? `Você tem ${dias} restante${d === 1 ? "" : "s"} de teste grátis.` : "Seu teste grátis termina hoje.";
+                  }
+                  if (subscription.status === "canceled") {
+                    return dias
+                      ? `Assinatura cancelada — o acesso termina em ${dias}.`
+                      : "Assinatura cancelada — o acesso termina hoje.";
+                  }
+                  if (subscription.status === "granted") {
+                    return dias ? `Acesso liberado — termina em ${dias}.` : "Acesso liberado — termina hoje.";
+                  }
+                  // active
+                  return dias ? `Vence em ${dias}.` : "Vence hoje.";
+                })()}
               </p>
             )}
 

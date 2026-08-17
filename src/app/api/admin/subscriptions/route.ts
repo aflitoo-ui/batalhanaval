@@ -47,8 +47,22 @@ export const GET = withApiErrors("admin.subscriptions.GET", async () => {
     { total: 0, ativos: 0, cancelados: 0, inadimplentes: 0 }
   );
 
+  function daysLeft(iso: string | null): number | null {
+    if (!iso) return null;
+    return Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  }
+
   return NextResponse.json({
     summary: { ...summary, receitaMes: Number(revenue?.total || 0) },
-    subscriptions: rows.map((r) => ({ ...r, price: r.price ? Number(r.price) : null })),
+    subscriptions: rows.map((r) => ({
+      ...r,
+      price: r.price ? Number(r.price) : null,
+      daysLeft:
+        r.status === "trialing" || r.status === "granted"
+          ? daysLeft(r.trialEndsAt)
+          : r.status === "active" || r.status === "canceled"
+            ? daysLeft(r.currentPeriodEnd)
+            : null,
+    })),
   });
 });

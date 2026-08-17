@@ -34,10 +34,24 @@ export const GET = withApiErrors("subscriptions.me.GET", async () => {
       )
     : [];
 
+  // Dias restantes de verdade (sem o filtro de "só perto de vencer" que o
+  // aviso no topo usa) — a própria tela de assinatura sempre mostra o prazo.
+  const fullDaysLeft = (() => {
+    if (!sub) return null;
+    const iso =
+      sub.status === "trialing" || sub.status === "granted"
+        ? sub.trialEndsAt
+        : sub.status === "active" || sub.status === "canceled"
+          ? sub.currentPeriodEnd
+          : null;
+    if (!iso) return null;
+    return Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  })();
+
   return NextResponse.json({
     access,
     subscription: sub
-      ? { ...sub, price: Number(sub.price) }
+      ? { ...sub, price: Number(sub.price), daysLeft: fullDaysLeft }
       : null,
     history: history.map((h) => ({ ...h, amount: Number(h.amount) })),
   });
