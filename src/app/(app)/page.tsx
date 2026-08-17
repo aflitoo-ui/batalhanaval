@@ -367,6 +367,22 @@ function NewSaleModal({
     }
   }
 
+  // Se o modal abrir antes da lista de produtos terminar de carregar (ex:
+  // clique rápido logo após um refresh), productId/preços ficam vazios pois
+  // só são inicializados uma vez, no mount. Assim que a lista chegar, se o
+  // produto selecionado ainda não é válido, seleciona o primeiro de verdade
+  // e preenche os preços — em vez de deixar o campo vazio escondido atrás do
+  // <select> mostrando visualmente a primeira opção sem valor nenhum salvo.
+  useEffect(() => {
+    if (products.length === 0) return;
+    if (products.some((p) => p.id === productId)) return;
+    const first = products[0];
+    setProductId(first.id);
+    setBuyPrice(String(first.defaultBuyPrice));
+    setSellPrice(String(first.defaultSellPrice));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
