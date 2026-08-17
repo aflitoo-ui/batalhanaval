@@ -103,7 +103,7 @@ export default function AppShell({
                   />
                 </svg>
               </Link>
-              <span className="text-lg font-bold tracking-tight text-[#3c1a7b]">STRIX</span>
+              <span className="text-lg font-bold tracking-tight text-[#946ce0]">STRIX</span>
             </div>
             <nav className="hidden gap-1 md:flex">
               {nav.map((item) => (
