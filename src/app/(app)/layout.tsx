@@ -14,7 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!access.allowed) redirect("/assinatura");
 
   return (
-    <AppShell user={user} daysLeft={access.status === "trialing" ? access.daysLeft : undefined}>
+    <AppShell user={user} daysLeft={access.daysLeft} subscriptionStatus={access.status}>
       {children}
     </AppShell>
   );

@@ -41,7 +41,11 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
     // deixa de renovar depois disso, não corta o que já foi pago.
     const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
     if (!periodEnd || periodEnd.getTime() >= Date.now()) {
-      return { allowed: true, status: sub.status };
+      const daysLeft = periodEnd ? Math.ceil((periodEnd.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : undefined;
+      // Só avisa quando está perto de vencer (ou já cancelada, que sempre
+      // tem um fim definido) — não fica mostrando contador o mês inteiro.
+      const showDaysLeft = sub.status === "canceled" || (daysLeft !== undefined && daysLeft <= 5);
+      return { allowed: true, status: sub.status, daysLeft: showDaysLeft ? Math.max(daysLeft ?? 0, 0) : undefined };
     }
     return { allowed: false, status: "expired" };
   }

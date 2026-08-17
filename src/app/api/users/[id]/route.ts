@@ -45,6 +45,13 @@ export const PATCH = withApiErrors(
     if (result.rowCount === 0) {
       return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
     }
+
+    // Senha trocada ou conta desativada: derruba qualquer sessão já aberta
+    // desse usuário em vez de deixá-la valer até expirar sozinha.
+    if (parsed.data.password !== undefined || parsed.data.active === false) {
+      await run(`DELETE FROM sessions WHERE user_id = $1`, [id]);
+    }
+
     return NextResponse.json({ ok: true });
   }
 );

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import type { PaymentProvider, NormalizedEvent } from "../types";
 
 // API da Asaas: https://docs.asaas.com/reference
@@ -98,9 +99,16 @@ export const asaasProvider: PaymentProvider = {
 
   verifyWebhookSignature(req) {
     // A Asaas reenvia, em cada chamada de webhook, o token configurado no
-    // painel ("Token de acesso") no header abaixo — comparamos com o nosso.
+    // painel ("Token de acesso") no header abaixo — comparamos com o nosso
+    // em tempo constante (timingSafeEqual) pra não vazar o valor por
+    // diferença de tempo de resposta.
     const token = req.headers.get("asaas-access-token");
-    return Boolean(token) && token === process.env.ASAAS_WEBHOOK_TOKEN;
+    const expected = process.env.ASAAS_WEBHOOK_TOKEN;
+    if (!token || !expected) return false;
+    const a = Buffer.from(token);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
   },
 
   parseWebhookEvent(rawBody) {

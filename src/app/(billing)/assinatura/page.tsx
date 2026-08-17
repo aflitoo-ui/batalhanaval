@@ -158,6 +158,19 @@ export default function AssinaturaPage() {
               </p>
             )}
 
+            {(subscription.status === "active" || subscription.status === "canceled") &&
+              access?.daysLeft !== undefined && (
+                <p className="mt-3 text-sm text-amber-400">
+                  {subscription.status === "canceled"
+                    ? access.daysLeft > 0
+                      ? `Assinatura cancelada — o acesso termina em ${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"}.`
+                      : "Assinatura cancelada — o acesso termina hoje."
+                    : access.daysLeft > 0
+                      ? `Vence em ${access.daysLeft} dia${access.daysLeft === 1 ? "" : "s"}.`
+                      : "Vence hoje."}
+                </p>
+              )}
+
             {!access?.allowed && (
               <p className="mt-3 text-sm text-red-400">
                 Seu acesso está bloqueado. Assine para continuar usando o STRIX.

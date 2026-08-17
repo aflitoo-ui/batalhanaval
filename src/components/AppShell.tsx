@@ -10,13 +10,29 @@ const NAV = [
   { href: "/relatorios", label: "Relatórios" },
 ];
 
+function subscriptionStatusMessage(status: string | undefined, daysLeft: number) {
+  const dias = `${daysLeft} dia${daysLeft === 1 ? "" : "s"}`;
+  if (status === "canceled") {
+    return daysLeft > 0
+      ? `Sua assinatura foi cancelada e o acesso termina em ${dias}.`
+      : "Sua assinatura cancelada termina hoje.";
+  }
+  if (status === "active") {
+    return daysLeft > 0 ? `Sua assinatura vence em ${dias}.` : "Sua assinatura vence hoje.";
+  }
+  // trialing (padrão)
+  return daysLeft > 0 ? `Teste grátis: ${dias} restante${daysLeft === 1 ? "" : "s"}.` : "Seu teste grátis termina hoje.";
+}
+
 export default function AppShell({
   user,
   daysLeft,
+  subscriptionStatus,
   children,
 }: {
   user: CurrentUser;
   daysLeft?: number;
+  subscriptionStatus?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -36,11 +52,9 @@ export default function AppShell({
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {daysLeft !== undefined && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-4 py-1.5 text-center text-sm text-amber-300">
-          {daysLeft > 0
-            ? `Teste grátis: ${daysLeft} dia${daysLeft === 1 ? "" : "s"} restante${daysLeft === 1 ? "" : "s"}.`
-            : "Seu teste grátis termina hoje."}{" "}
+          {subscriptionStatusMessage(subscriptionStatus, daysLeft)}{" "}
           <Link href="/assinatura" className="font-medium underline underline-offset-2">
-            Assinar agora
+            {subscriptionStatus === "canceled" ? "Ver assinatura" : "Assinar agora"}
           </Link>
         </div>
       )}
