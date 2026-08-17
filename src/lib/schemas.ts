@@ -10,7 +10,7 @@ export const productSchema = z.object({
 export const saleSchema = z.object({
   saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   productId: z.number().int().positive(),
-  customerName: z.string().trim().min(1, "Nome do cliente obrigatório").max(100),
+  customerId: z.number().int().positive(),
   quantity: z.number().positive(),
   unitBuyPrice: z.number().min(0),
   unitSellPrice: z.number().min(0),
@@ -19,6 +19,12 @@ export const saleSchema = z.object({
 });
 
 export const saleUpdateSchema = saleSchema.omit({ initialPayment: true }).partial();
+
+export const customerSchema = z.object({
+  name: z.string().trim().min(1, "Nome obrigatório").max(100),
+  phone: z.string().trim().max(30).optional().nullable(),
+  active: z.boolean().optional(),
+});
 
 export const paymentSchema = z.object({
   amount: z.number().positive(),

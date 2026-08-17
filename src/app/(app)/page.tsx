@@ -10,10 +10,18 @@ type Product = {
   active: boolean;
 };
 
+type Customer = {
+  id: number;
+  name: string;
+  phone: string | null;
+  active: boolean;
+};
+
 type Sale = {
   id: number;
   saleDate: string;
-  customerName: string;
+  customerId: number | null;
+  customerName: string | null;
   productId: number;
   productName: string;
   quantity: number;
@@ -44,6 +52,7 @@ function todayISO() {
 export default function VendasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewSale, setShowNewSale] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
@@ -52,11 +61,17 @@ export default function VendasPage() {
   const [search, setSearch] = useState("");
 
   async function load() {
-    const [salesRes, productsRes] = await Promise.all([fetch("/api/sales"), fetch("/api/products")]);
+    const [salesRes, productsRes, customersRes] = await Promise.all([
+      fetch("/api/sales"),
+      fetch("/api/products"),
+      fetch("/api/customers"),
+    ]);
     const salesData = await salesRes.json();
     const productsData = await productsRes.json();
+    const customersData = await customersRes.json();
     setSales(salesData.sales || []);
     setProducts(productsData.products || []);
+    setCustomers(customersData.customers || []);
     setLoading(false);
   }
 
@@ -67,7 +82,7 @@ export default function VendasPage() {
   const filteredSales = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return sales;
-    return sales.filter((s) => s.customerName.toLowerCase().includes(q));
+    return sales.filter((s) => (s.customerName || "").toLowerCase().includes(q));
   }, [sales, search]);
 
   const totals = useMemo(() => {
@@ -254,6 +269,8 @@ export default function VendasPage() {
       {showNewSale && (
         <NewSaleModal
           products={products.filter((p) => p.active)}
+          customers={customers.filter((c) => c.active)}
+          onCustomerCreated={(c) => setCustomers((prev) => [...prev, c])}
           onClose={() => setShowNewSale(false)}
           onSaved={() => {
             setShowNewSale(false);
@@ -266,6 +283,8 @@ export default function VendasPage() {
         <EditSaleModal
           sale={sales.find((s) => s.id === editSaleId)!}
           products={products.filter((p) => p.active)}
+          customers={customers.filter((c) => c.active)}
+          onCustomerCreated={(c) => setCustomers((prev) => [...prev, c])}
           onClose={() => setEditSaleId(null)}
           onSaved={() => {
             setEditSaleId(null);
@@ -317,16 +336,20 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
 
 function NewSaleModal({
   products,
+  customers,
+  onCustomerCreated,
   onClose,
   onSaved,
 }: {
   products: Product[];
+  customers: Customer[];
+  onCustomerCreated: (c: Customer) => void;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [saleDate, setSaleDate] = useState(todayISO());
   const [productId, setProductId] = useState<number | "">(products[0]?.id ?? "");
-  const [customerName, setCustomerName] = useState("");
+  const [customer, setCustomer] = useState<Customer | null>(null);
   const [quantity, setQuantity] = useState("1");
   const [buyPrice, setBuyPrice] = useState(String(products[0]?.defaultBuyPrice ?? ""));
   const [sellPrice, setSellPrice] = useState(String(products[0]?.defaultSellPrice ?? ""));
@@ -351,8 +374,8 @@ function NewSaleModal({
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
     const payment = initialPayment ? Number(initialPayment.replace(",", ".")) : 0;
-    if (!productId || !customerName.trim() || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
-      setError("Preencha todos os campos corretamente.");
+    if (!productId || !customer || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+      setError("Preencha todos os campos corretamente — selecione ou crie um cliente.");
       return;
     }
     setSaving(true);
@@ -362,7 +385,7 @@ function NewSaleModal({
       body: JSON.stringify({
         saleDate,
         productId,
-        customerName: customerName.trim(),
+        customerId: customer.id,
         quantity: qty,
         unitBuyPrice: qp,
         unitSellPrice: qv,
@@ -416,11 +439,11 @@ function NewSaleModal({
           </Field>
         </div>
         <Field label="Cliente">
-          <input
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="input"
-            placeholder="Nome do cliente"
+          <CustomerPicker
+            customers={customers}
+            value={customer}
+            onChange={setCustomer}
+            onCustomerCreated={onCustomerCreated}
             autoFocus
           />
         </Field>
@@ -468,17 +491,23 @@ function NewSaleModal({
 function EditSaleModal({
   sale,
   products,
+  customers,
+  onCustomerCreated,
   onClose,
   onSaved,
 }: {
   sale: Sale;
   products: Product[];
+  customers: Customer[];
+  onCustomerCreated: (c: Customer) => void;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [saleDate, setSaleDate] = useState(sale.saleDate.slice(0, 10));
   const [productId, setProductId] = useState<number>(sale.productId);
-  const [customerName, setCustomerName] = useState(sale.customerName);
+  const [customer, setCustomer] = useState<Customer | null>(
+    sale.customerId ? { id: sale.customerId, name: sale.customerName || "", phone: null, active: true } : null
+  );
   const [quantity, setQuantity] = useState(String(sale.quantity));
   const [buyPrice, setBuyPrice] = useState(String(sale.unitBuyPrice));
   const [sellPrice, setSellPrice] = useState(String(sale.unitSellPrice));
@@ -492,14 +521,21 @@ function EditSaleModal({
     ? products
     : [{ id: sale.productId, name: sale.productName, defaultBuyPrice: 0, defaultSellPrice: 0, active: false }, ...products];
 
+  // Mesma lógica pro cliente: se ele foi desativado depois da venda, garante
+  // que continue aparecendo como opção selecionável.
+  const customerOptions =
+    sale.customerId && !customers.some((c) => c.id === sale.customerId)
+      ? [{ id: sale.customerId, name: sale.customerName || "", phone: null, active: false }, ...customers]
+      : customers;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     const qty = Number(quantity.replace(",", "."));
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
-    if (!productId || !customerName.trim() || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
-      setError("Preencha todos os campos corretamente.");
+    if (!productId || !customer || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+      setError("Preencha todos os campos corretamente — selecione ou crie um cliente.");
       return;
     }
     setSaving(true);
@@ -509,7 +545,7 @@ function EditSaleModal({
       body: JSON.stringify({
         saleDate,
         productId,
-        customerName: customerName.trim(),
+        customerId: customer.id,
         quantity: qty,
         unitBuyPrice: qp,
         unitSellPrice: qv,
@@ -526,7 +562,7 @@ function EditSaleModal({
   }
 
   return (
-    <ModalShell title={`Editar venda — ${sale.customerName}`} onClose={onClose}>
+    <ModalShell title={`Editar venda — ${sale.customerName || ""}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data">
@@ -543,11 +579,11 @@ function EditSaleModal({
           </Field>
         </div>
         <Field label="Cliente">
-          <input
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="input"
-            placeholder="Nome do cliente"
+          <CustomerPicker
+            customers={customerOptions}
+            value={customer}
+            onChange={setCustomer}
+            onCustomerCreated={onCustomerCreated}
             autoFocus
           />
         </Field>
@@ -649,7 +685,7 @@ function PaymentsModal({
   }
 
   return (
-    <ModalShell title={`Pagamentos — ${sale.customerName}`} onClose={onClose}>
+    <ModalShell title={`Pagamentos — ${sale.customerName || ""}`} onClose={onClose}>
       <div className="mb-3 grid grid-cols-3 gap-2 text-sm">
         <div>
           <p className="text-[11px] text-zinc-500">Total</p>
@@ -741,6 +777,105 @@ function PaymentsModal({
         <p className="border-t border-zinc-800 pt-3 text-sm text-emerald-400">Pago integralmente.</p>
       )}
     </ModalShell>
+  );
+}
+
+function CustomerPicker({
+  customers,
+  value,
+  onChange,
+  onCustomerCreated,
+  autoFocus,
+}: {
+  customers: Customer[];
+  value: Customer | null;
+  onChange: (c: Customer | null) => void;
+  onCustomerCreated: (c: Customer) => void;
+  autoFocus?: boolean;
+}) {
+  const [query, setQuery] = useState(value?.name ?? "");
+  const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
+  const exactMatch = customers.some((c) => c.name.toLowerCase() === q);
+
+  async function handleCreate() {
+    const name = query.trim();
+    if (!name) return;
+    setCreating(true);
+    setCreateError(null);
+    const res = await fetch("/api/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json().catch(() => null);
+    setCreating(false);
+    if (!res.ok) {
+      setCreateError(data?.error || "Erro ao criar cliente.");
+      return;
+    }
+    const newCustomer: Customer = { id: data.id, name, phone: null, active: true };
+    onCustomerCreated(newCustomer);
+    onChange(newCustomer);
+    setQuery(newCustomer.name);
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative">
+      <input
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setOpen(true);
+          setCreateError(null);
+          if (value) onChange(null);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className="input"
+        placeholder="Buscar ou criar cliente..."
+        autoFocus={autoFocus}
+      />
+      {open && (
+        <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg">
+          {filtered.length === 0 && !q && (
+            <p className="px-3 py-1.5 text-xs text-zinc-500">Nenhum cliente cadastrado ainda.</p>
+          )}
+          {filtered.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onChange(c);
+                setQuery(c.name);
+                setOpen(false);
+              }}
+              className="block w-full px-3 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
+            >
+              {c.name}
+            </button>
+          ))}
+          {q && !exactMatch && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleCreate}
+              disabled={creating}
+              className="block w-full border-t border-zinc-800 px-3 py-1.5 text-left text-sm text-emerald-400 hover:bg-zinc-800 disabled:opacity-60"
+            >
+              {creating ? "Criando..." : `+ Criar cliente "${query.trim()}"`}
+            </button>
+          )}
+        </div>
+      )}
+      {createError && <p className="mt-1 text-xs text-red-400">{createError}</p>}
+    </div>
   );
 }
 

@@ -132,4 +132,34 @@ CREATE INDEX IF NOT EXISTS idx_payments_history_subscription ON payments_history
 INSERT INTO plans (code, name, price, interval)
   VALUES ('mensal-2990', 'Plano Mensal', 29.90, 'month')
   ON CONFLICT (code) DO NOTHING;
+
+-- Cadastro de clientes: antes o nome do cliente era texto livre em cada
+-- venda, o que fragmentava o mesmo cliente em vários nomes diferentes nos
+-- relatórios. Agora vendas referenciam um cliente cadastrado (mesma lógica
+-- de produtos), e o nome exibido vem sempre do cadastro (join), não mais
+-- congelado na venda.
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  phone TEXT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_customers_user ON customers(user_id);
+
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id);
+
+-- Migra vendas antigas: cria um cliente cadastrado pra cada nome distinto já
+-- usado e liga as vendas a ele. Idempotente (só afeta linhas sem customer_id).
+INSERT INTO customers (user_id, name)
+  SELECT DISTINCT user_id, customer_name FROM sales WHERE customer_id IS NULL
+  ON CONFLICT (user_id, name) DO NOTHING;
+
+UPDATE sales s SET customer_id = c.id
+  FROM customers c
+  WHERE s.customer_id IS NULL AND c.user_id = s.user_id AND c.name = s.customer_name;
+
+ALTER TABLE sales ALTER COLUMN customer_name DROP NOT NULL;
 `;

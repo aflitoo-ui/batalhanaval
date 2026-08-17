@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 type Sale = {
   id: number;
   saleDate: string;
-  customerName: string;
+  customerId: number | null;
+  customerName: string | null;
   productName: string;
   quantity: number;
   unitBuyPrice: number;
@@ -21,7 +22,7 @@ function formatBRL(n: number) {
 }
 
 type ProductAgg = { name: string; quantity: number; revenue: number; cost: number; profit: number; marginPct: number };
-type CustomerAgg = { name: string; total: number; paid: number; owed: number; profit: number };
+type CustomerAgg = { key: string; name: string; total: number; paid: number; owed: number; profit: number };
 
 function aggregateByProduct(sales: Sale[]): ProductAgg[] {
   const map = new Map<string, ProductAgg>();
@@ -40,12 +41,16 @@ function aggregateByProduct(sales: Sale[]): ProductAgg[] {
 function aggregateByCustomer(sales: Sale[]): CustomerAgg[] {
   const map = new Map<string, CustomerAgg>();
   for (const s of sales) {
-    const entry = map.get(s.customerName) || { name: s.customerName, total: 0, paid: 0, owed: 0, profit: 0 };
+    // Agrupa pela identidade do cliente (customerId), não pelo texto do
+    // nome — assim o mesmo cliente com produtos diferentes conta como um
+    // único cliente no ranking, mesmo se o nome dele mudar depois.
+    const key = s.customerId != null ? `id:${s.customerId}` : `name:${s.customerName || ""}`;
+    const entry = map.get(key) || { key, name: s.customerName || "-", total: 0, paid: 0, owed: 0, profit: 0 };
     entry.total += s.total;
     entry.paid += s.paid;
     entry.owed += s.owed;
     entry.profit += s.profit;
-    map.set(s.customerName, entry);
+    map.set(key, entry);
   }
   return Array.from(map.values());
 }
@@ -256,7 +261,7 @@ export default function RelatoriosPage() {
             </thead>
             <tbody>
               {sortedCustomers.map((c) => (
-                <tr key={c.name} className="border-b border-zinc-900 last:border-0">
+                <tr key={c.key} className="border-b border-zinc-900 last:border-0">
                   <td className="truncate py-1.5 pr-3 font-medium text-amber-400">{c.name}</td>
                   <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{formatBRL(c.total)}</td>
                   <td className="py-1.5 pr-3 text-right tabular-nums text-emerald-400">{formatBRL(c.paid)}</td>
