@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useIdleLogout } from "@/lib/useIdleLogout";
+
+const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
 type AccessStatus = {
   allowed: boolean;
@@ -45,6 +48,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function AssinaturaPage() {
   const router = useRouter();
+  useIdleLogout(IDLE_LOGOUT_MS);
   const [access, setAccess] = useState<AccessStatus | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);

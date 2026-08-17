@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { CurrentUser } from "@/lib/auth";
+import { useIdleLogout } from "@/lib/useIdleLogout";
+
+const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
 const NAV = [
   { href: "/", label: "Vendas" },
@@ -56,6 +59,7 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  useIdleLogout(IDLE_LOGOUT_MS);
   const nav =
     user.role === "admin"
       ? [...NAV, { href: "/usuarios", label: "Usuários" }, { href: "/admin/assinaturas", label: "Assinaturas" }]
