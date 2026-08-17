@@ -95,6 +95,7 @@ export default function VendasPage() {
   const [onlyOwed, setOnlyOwed] = useState(false);
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
   const [showArchiveMonth, setShowArchiveMonth] = useState(false);
+  const [archiveBlockedMsg, setArchiveBlockedMsg] = useState<string | null>(null);
 
   async function load() {
     const [salesRes, productsRes, customersRes] = await Promise.all([
@@ -118,6 +119,7 @@ export default function VendasPage() {
   const isCurrentMonth = viewMonth.year === currentYearMonth().year && viewMonth.month === currentYearMonth().month;
 
   function goToMonth(delta: number) {
+    setArchiveBlockedMsg(null);
     setViewMonth((v) => {
       const d = new Date(v.year, v.month + delta, 1);
       return { year: d.getFullYear(), month: d.getMonth() };
@@ -231,15 +233,29 @@ export default function VendasPage() {
         </button>
       </div>
 
-      {!onlyOwed && filteredSales.length > 0 && totals.owed === 0 && (
-        <p className="text-center">
+      {!onlyOwed && filteredSales.length > 0 && (
+        <div className="text-center">
           <button
-            onClick={() => setShowArchiveMonth(true)}
-            className="text-xs font-medium text-zinc-600 hover:text-amber-400"
+            onClick={() => {
+              if (totals.owed > 0) {
+                setArchiveBlockedMsg(
+                  `Só dá pra arquivar quando o mês estiver totalmente quitado — ainda falta ${formatBRL(totals.owed)}.`
+                );
+                return;
+              }
+              setArchiveBlockedMsg(null);
+              setShowArchiveMonth(true);
+            }}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              totals.owed > 0
+                ? "bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+                : "bg-zinc-900 text-zinc-300 hover:bg-zinc-800 hover:text-amber-400"
+            }`}
           >
-            arquivar {MONTH_NAMES[viewMonth.month].toLowerCase()} inteiro
+            {totals.owed > 0 && "🔒"} arquivar {MONTH_NAMES[viewMonth.month].toLowerCase()} inteiro
           </button>
-        </p>
+          {archiveBlockedMsg && <p className="mt-1.5 text-xs text-amber-400">{archiveBlockedMsg}</p>}
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
