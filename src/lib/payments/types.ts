@@ -1,5 +1,5 @@
 export interface PaymentProvider {
-  createCustomer(user: { id: number; name: string; email: string }): Promise<{ providerCustomerId: string }>;
+  createCustomer(user: { id: number; name: string; email: string; cpfCnpj: string }): Promise<{ providerCustomerId: string }>;
   createSubscription(params: {
     providerCustomerId: string;
     planCode: string;

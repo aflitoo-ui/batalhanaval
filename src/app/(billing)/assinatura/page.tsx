@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type AccessStatus = {
   allowed: boolean;
@@ -41,6 +42,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function AssinaturaPage() {
+  const router = useRouter();
   const [access, setAccess] = useState<AccessStatus | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -48,6 +50,8 @@ export default function AssinaturaPage() {
   const [starting, setStarting] = useState(false);
   const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsCpfCnpj, setNeedsCpfCnpj] = useState(false);
+  const [cpfCnpj, setCpfCnpj] = useState("");
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -64,15 +68,34 @@ export default function AssinaturaPage() {
 
   async function handleSubscribe() {
     setError(null);
+    if (needsCpfCnpj && cpfCnpj.replace(/\D/g, "").length < 11) {
+      setError("Informe um CPF ou CNPJ válido.");
+      return;
+    }
     setStarting(true);
-    const res = await fetch("/api/subscriptions/checkout", { method: "POST" });
+    const res = await fetch("/api/subscriptions/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(needsCpfCnpj ? { cpfCnpj } : {}),
+    });
     const data = await res.json().catch(() => null);
     setStarting(false);
     if (!res.ok) {
+      if (data?.code === "cpf_cnpj_required") {
+        setNeedsCpfCnpj(true);
+        setError(needsCpfCnpj ? "CPF/CNPJ inválido — confira os números." : null);
+        return;
+      }
       setError(data?.error || "Erro ao iniciar assinatura.");
       return;
     }
     window.location.href = data.checkoutUrl;
+  }
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
   }
 
   async function handleCancel() {
@@ -94,13 +117,21 @@ export default function AssinaturaPage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6 px-4 py-10">
-      <div>
-        <h1 className="text-xl font-bold text-zinc-100">Minha assinatura</h1>
-        {access?.allowed && (
-          <Link href="/" className="text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300">
-            voltar pro sistema
-          </Link>
-        )}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-zinc-100">Minha assinatura</h1>
+          {access?.allowed && (
+            <Link href="/" className="text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300">
+              voltar pro sistema
+            </Link>
+          )}
+        </div>
+        <button
+          onClick={handleLogout}
+          className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+        >
+          Sair
+        </button>
       </div>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
@@ -134,6 +165,20 @@ export default function AssinaturaPage() {
               <p className="mt-3 text-sm text-zinc-400">
                 Próxima cobrança: <span className="text-zinc-200">{formatDate(subscription.currentPeriodEnd)}</span>
               </p>
+            )}
+
+            {needsCpfCnpj && (
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-medium text-zinc-400">CPF ou CNPJ (necessário pra gerar o pagamento)</label>
+                <input
+                  value={cpfCnpj}
+                  onChange={(e) => setCpfCnpj(e.target.value)}
+                  className="input max-w-xs"
+                  placeholder="Só números"
+                  inputMode="numeric"
+                  autoFocus
+                />
+              </div>
             )}
 
             {error && <p className="mt-3 text-sm text-red-400">{error}</p>}

@@ -45,7 +45,12 @@ export const asaasProvider: PaymentProvider = {
   async createCustomer(user) {
     const data = await asaasFetch("/customers", {
       method: "POST",
-      body: JSON.stringify({ name: user.name, email: user.email, externalReference: String(user.id) }),
+      body: JSON.stringify({
+        name: user.name,
+        email: user.email,
+        cpfCnpj: user.cpfCnpj.replace(/\D/g, ""),
+        externalReference: String(user.id),
+      }),
     });
     return { providerCustomerId: data.id };
   },

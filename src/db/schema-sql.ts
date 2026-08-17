@@ -80,6 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
 -- trial e vira paga através de eventos de webhook do gateway de pagamento
 -- (nunca por retorno do navegador).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cpf_cnpj TEXT;
 
 CREATE TABLE IF NOT EXISTS plans (
   id SERIAL PRIMARY KEY,
