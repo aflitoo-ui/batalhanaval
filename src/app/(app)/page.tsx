@@ -404,8 +404,12 @@ function NewSaleModal({
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
     const payment = initialPayment ? Number(initialPayment.replace(",", ".")) : 0;
-    if (!productId || !customer || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
-      setError("Preencha todos os campos corretamente — selecione ou crie um cliente.");
+    if (!customer) {
+      setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
+      return;
+    }
+    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+      setError("Preencha todos os campos corretamente.");
       return;
     }
     setSaving(true);
@@ -564,8 +568,12 @@ function EditSaleModal({
     const qty = Number(quantity.replace(",", "."));
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
-    if (!productId || !customer || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
-      setError("Preencha todos os campos corretamente — selecione ou crie um cliente.");
+    if (!customer) {
+      setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
+      return;
+    }
+    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv)) {
+      setError("Preencha todos os campos corretamente.");
       return;
     }
     setSaving(true);
@@ -863,6 +871,12 @@ function CustomerPicker({
     setOpen(false);
   }
 
+  function selectCustomer(c: Customer) {
+    onChange(c);
+    setQuery(c.name);
+    setOpen(false);
+  }
+
   return (
     <div className="relative">
       <input
@@ -874,7 +888,27 @@ function CustomerPicker({
           if (value) onChange(null);
         }}
         onClick={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          const exact = customers.find((c) => c.name.toLowerCase() === q);
+          if (exact) {
+            selectCustomer(exact);
+          } else if (filtered.length > 0) {
+            selectCustomer(filtered[0]);
+          } else if (q) {
+            handleCreate();
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            setOpen(false);
+            if (!value) {
+              const exact = customers.find((c) => c.name.toLowerCase() === q);
+              if (exact) selectCustomer(exact);
+            }
+          }, 150);
+        }}
         className="input"
         placeholder="Buscar ou criar cliente..."
         autoFocus={autoFocus}
@@ -889,11 +923,7 @@ function CustomerPicker({
               key={c.id}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onChange(c);
-                setQuery(c.name);
-                setOpen(false);
-              }}
+              onClick={() => selectCustomer(c)}
               className="block w-full px-3 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
             >
               {c.name}
