@@ -97,6 +97,12 @@ export default function VendasPage() {
   const [showArchiveMonth, setShowArchiveMonth] = useState(false);
   const [archiveBlockedMsg, setArchiveBlockedMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!archiveBlockedMsg) return;
+    const t = setTimeout(() => setArchiveBlockedMsg(null), 4000);
+    return () => clearTimeout(t);
+  }, [archiveBlockedMsg]);
+
   async function load() {
     const [salesRes, productsRes, customersRes] = await Promise.all([
       fetch("/api/sales"),
