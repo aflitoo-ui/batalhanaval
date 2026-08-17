@@ -29,6 +29,18 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
+/* iOS dá zoom automático ao focar um campo com letra menor que 16px, e às
+   vezes não volta sozinho — força 16px em telas pequenas pra isso nunca
+   acontecer (o campo continua visualmente do mesmo tamanho, css/rem cuida
+   da diferença). */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer components {
   .input {
     @apply w-full rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500;
