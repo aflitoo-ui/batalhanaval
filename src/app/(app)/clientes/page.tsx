@@ -24,6 +24,8 @@ export default function ClientesPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
+  const activeCount = customers.filter((c) => c.active).length;
+
   async function load() {
     const res = await fetch("/api/customers");
     const data = await res.json();
@@ -113,7 +115,15 @@ export default function ClientesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-zinc-100">Clientes</h1>
+      <div className="flex items-baseline gap-2">
+        <h1 className="text-xl font-bold text-zinc-100">Clientes</h1>
+        {!loading && (
+          <span className="text-sm text-zinc-500">
+            {customers.length} {customers.length === 1 ? "cliente" : "clientes"}
+            {activeCount !== customers.length && ` (${activeCount} ativo${activeCount === 1 ? "" : "s"})`}
+          </span>
+        )}
+      </div>
 
       <form
         onSubmit={handleAdd}
