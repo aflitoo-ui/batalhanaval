@@ -229,7 +229,7 @@ export default function ClientesPage() {
                             onClick={() => toggleActive(c)}
                             className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
                           >
-                            {c.active ? "Desativar" : "Reativar"}
+                            {c.active ? "desativar" : "reativar"}
                           </button>
                           <button
                             onClick={() => {
@@ -341,7 +341,7 @@ export default function ClientesPage() {
                                 onClick={() => toggleActive(c)}
                                 className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
                               >
-                                {c.active ? "Desativar" : "Reativar"}
+                                {c.active ? "desativar" : "reativar"}
                               </button>
                               <button
                                 onClick={() => {

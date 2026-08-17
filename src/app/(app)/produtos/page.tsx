@@ -272,7 +272,7 @@ export default function ProdutosPage() {
                             onClick={() => toggleActive(p)}
                             className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
                           >
-                            {p.active ? "Desativar" : "Reativar"}
+                            {p.active ? "desativar" : "reativar"}
                           </button>
                           <button
                             onClick={() => {
@@ -404,7 +404,7 @@ export default function ProdutosPage() {
                               onClick={() => toggleActive(p)}
                               className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
                             >
-                              {p.active ? "Desativar" : "Reativar"}
+                              {p.active ? "desativar" : "reativar"}
                             </button>
                             <button
                               onClick={() => {
