@@ -187,13 +187,18 @@ export default function AssinaturaPage() {
               {(subscription.status === "trialing" ||
                 subscription.status === "expired" ||
                 subscription.status === "canceled" ||
-                subscription.status === "past_due") && (
+                subscription.status === "past_due" ||
+                subscription.status === "pending") && (
                 <button
                   onClick={handleSubscribe}
                   disabled={starting}
                   className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
                 >
-                  {starting ? "Abrindo pagamento..." : "Assinar agora"}
+                  {starting
+                    ? "Abrindo pagamento..."
+                    : subscription.status === "pending"
+                      ? "Continuar pagamento"
+                      : "Assinar agora"}
                 </button>
               )}
               {subscription.status === "active" && (

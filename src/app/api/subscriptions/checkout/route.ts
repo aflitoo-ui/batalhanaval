@@ -11,17 +11,29 @@ export const POST = withApiErrors("subscriptions.checkout.POST", async (req: Nex
   const sub = await get<{
     id: number;
     providerCustomerId: string | null;
+    providerSubscriptionId: string | null;
     planCode: string;
     price: string;
     cpfCnpj: string | null;
   }>(
-    `SELECT s.id, s.provider_customer_id as "providerCustomerId", p.code as "planCode", p.price,
+    `SELECT s.id, s.provider_customer_id as "providerCustomerId",
+      s.provider_subscription_id as "providerSubscriptionId", p.code as "planCode", p.price,
       u.cpf_cnpj as "cpfCnpj"
      FROM subscriptions s JOIN plans p ON p.id = s.plan_id JOIN users u ON u.id = s.user_id
      WHERE s.user_id = $1 ORDER BY s.id DESC LIMIT 1`,
     [user.id]
   );
   if (!sub) return NextResponse.json({ error: "Nenhuma assinatura encontrada." }, { status: 404 });
+
+  const provider = getPaymentProvider();
+
+  // Já existe uma assinatura criada na Asaas esperando pagamento (ex: o
+  // usuário fechou a página antes de pagar) — reaproveita a mesma fatura em
+  // vez de criar uma assinatura nova a cada tentativa.
+  if (sub.providerSubscriptionId) {
+    const existingUrl = await provider.getPendingCheckoutUrl(sub.providerSubscriptionId);
+    if (existingUrl) return NextResponse.json({ checkoutUrl: existingUrl });
+  }
 
   let cpfCnpj = sub.cpfCnpj;
   if (!cpfCnpj) {
@@ -37,8 +49,6 @@ export const POST = withApiErrors("subscriptions.checkout.POST", async (req: Nex
     await run(`UPDATE users SET cpf_cnpj = $1 WHERE id = $2`, [cpfCnpj, user.id]);
   }
   if (!cpfCnpj) return NextResponse.json({ error: "Erro interno." }, { status: 500 });
-
-  const provider = getPaymentProvider();
 
   let providerCustomerId = sub.providerCustomerId;
   if (!providerCustomerId) {

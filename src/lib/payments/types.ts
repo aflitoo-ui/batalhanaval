@@ -6,6 +6,8 @@ export interface PaymentProvider {
     value: number;
   }): Promise<{ providerSubscriptionId: string; checkoutUrl: string }>;
   cancelSubscription(providerSubscriptionId: string): Promise<void>;
+  /** Recupera o link de pagamento da fatura pendente de uma assinatura já criada (ex: usuário fechou a página antes de pagar). Null se não houver fatura em aberto. */
+  getPendingCheckoutUrl(providerSubscriptionId: string): Promise<string | null>;
   verifyWebhookSignature(req: Request, rawBody: string): boolean;
   parseWebhookEvent(rawBody: string): NormalizedEvent | null;
 }

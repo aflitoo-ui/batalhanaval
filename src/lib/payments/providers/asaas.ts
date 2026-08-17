@@ -84,6 +84,11 @@ export const asaasProvider: PaymentProvider = {
     await asaasFetch(`/subscriptions/${providerSubscriptionId}`, { method: "DELETE" });
   },
 
+  async getPendingCheckoutUrl(providerSubscriptionId) {
+    const payments = await asaasFetch(`/payments?subscription=${providerSubscriptionId}&status=PENDING&limit=1`);
+    return payments?.data?.[0]?.invoiceUrl || null;
+  },
+
   verifyWebhookSignature(req) {
     // A Asaas reenvia, em cada chamada de webhook, o token configurado no
     // painel ("Token de acesso") no header abaixo — comparamos com o nosso.
