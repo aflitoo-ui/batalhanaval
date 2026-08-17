@@ -205,7 +205,7 @@ export default function AssinaturaPage() {
                     <button
                       onClick={() => handleSubscribe(true)}
                       disabled={starting}
-                      className="mt-1.5 block text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-300 disabled:opacity-60"
+                      className="mt-3 block py-1 text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-300 disabled:opacity-60"
                     >
                       Link não funciona? Gerar um novo
                     </button>
