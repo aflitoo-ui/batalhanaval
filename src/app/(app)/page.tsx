@@ -45,6 +45,18 @@ function formatDate(iso: string) {
   return `${d}/${m}`;
 }
 
+// Deixa o campo inteiro clicável pra abrir o calendário, não só o ícone
+// (que é minúsculo e quase invisível no fundo escuro). showPicker() pode não
+// existir em todo navegador e pode reclamar fora de um gesto real do
+// usuário — por isso o try/catch, silencioso, sem quebrar o campo.
+function openDatePicker(e: React.MouseEvent<HTMLInputElement>) {
+  try {
+    e.currentTarget.showPicker?.();
+  } catch {
+    // sem suporte ou fora de um gesto do usuário — o clique no ícone continua funcionando normalmente
+  }
+}
+
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -521,6 +533,7 @@ function NewSaleModal({
               type="date"
               value={saleDate}
               onChange={(e) => setSaleDate(e.target.value)}
+              onClick={openDatePicker}
               className="input"
             />
           </Field>
@@ -670,7 +683,13 @@ function EditSaleModal({
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data">
-            <input type="date" value={saleDate} onChange={(e) => setSaleDate(e.target.value)} className="input" />
+            <input
+              type="date"
+              value={saleDate}
+              onChange={(e) => setSaleDate(e.target.value)}
+              onClick={openDatePicker}
+              className="input"
+            />
           </Field>
           <Field label="Produto">
             <select value={productId} onChange={(e) => setProductId(Number(e.target.value))} className="input">
@@ -866,7 +885,13 @@ function PaymentsModal({
               />
             </Field>
             <Field label="Data">
-              <input type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} className="input" />
+              <input
+                type="date"
+                value={paidAt}
+                onChange={(e) => setPaidAt(e.target.value)}
+                onClick={openDatePicker}
+                className="input"
+              />
             </Field>
           </div>
           <Field label="Observação (opcional)">
