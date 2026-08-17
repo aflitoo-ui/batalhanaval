@@ -85,8 +85,15 @@ export const asaasProvider: PaymentProvider = {
   },
 
   async getPendingCheckoutUrl(providerSubscriptionId) {
-    const payments = await asaasFetch(`/payments?subscription=${providerSubscriptionId}&status=PENDING&limit=1`);
-    return payments?.data?.[0]?.invoiceUrl || null;
+    // A fatura da Asaas continua válida mesmo após o vencimento (só muda
+    // de PENDING pra OVERDUE) — então reaproveita o mesmo link nos dois casos,
+    // só gera uma cobrança nova se essa já tiver sido paga/removida.
+    const payments = await asaasFetch(`/payments?subscription=${providerSubscriptionId}&limit=1`);
+    const payment = payments?.data?.[0];
+    if (payment && (payment.status === "PENDING" || payment.status === "OVERDUE")) {
+      return payment.invoiceUrl || null;
+    }
+    return null;
   },
 
   verifyWebhookSignature(req) {
