@@ -49,6 +49,26 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const MONTH_NAMES = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+function currentYearMonth() {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
 export default function VendasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -60,6 +80,7 @@ export default function VendasPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [onlyOwed, setOnlyOwed] = useState(false);
+  const [viewMonth, setViewMonth] = useState(currentYearMonth);
 
   async function load() {
     const [salesRes, productsRes, customersRes] = await Promise.all([
@@ -80,12 +101,28 @@ export default function VendasPage() {
     void load();
   }, []);
 
+  const isCurrentMonth = viewMonth.year === currentYearMonth().year && viewMonth.month === currentYearMonth().month;
+
+  function goToMonth(delta: number) {
+    setViewMonth((v) => {
+      const d = new Date(v.year, v.month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  }
+
   const filteredSales = useMemo(() => {
     const q = search.trim().toLowerCase();
     return sales
+      // "Só quem deve" é sobre "quem me deve agora", não tem relação com mês
+      // — por isso ignora o filtro de mês quando ativado.
+      .filter((s) => {
+        if (onlyOwed) return true;
+        const [y, m] = s.saleDate.split("T")[0].split("-").map(Number);
+        return y === viewMonth.year && m === viewMonth.month + 1;
+      })
       .filter((s) => !q || (s.customerName || "").toLowerCase().includes(q))
       .filter((s) => !onlyOwed || s.owed > 0);
-  }, [sales, search, onlyOwed]);
+  }, [sales, search, onlyOwed, viewMonth]);
 
   const totals = useMemo(() => {
     return filteredSales.reduce(
@@ -158,6 +195,28 @@ export default function VendasPage() {
         </button>
       </div>
 
+      <div className={`flex items-center justify-center gap-3 ${onlyOwed ? "opacity-40" : ""}`}>
+        <button
+          onClick={() => goToMonth(-1)}
+          disabled={onlyOwed}
+          aria-label="Mês anterior"
+          className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none"
+        >
+          ◀
+        </button>
+        <span className="w-36 text-center text-sm font-medium text-zinc-200">
+          {onlyOwed ? "Todas as datas" : `${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}`}
+        </span>
+        <button
+          onClick={() => goToMonth(1)}
+          disabled={onlyOwed || isCurrentMonth}
+          aria-label="Próximo mês"
+          className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
+        >
+          ▶
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="Total vendido" value={formatBRL(totals.total)} />
         <SummaryCard label="Recebido" value={formatBRL(totals.paid)} tone="emerald" />
@@ -188,7 +247,13 @@ export default function VendasPage() {
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
       ) : filteredSales.length === 0 ? (
         <p className="py-6 text-center text-sm text-zinc-500">
-          {sales.length === 0 ? "Nenhuma venda lançada ainda." : "Nenhuma venda encontrada para essa busca."}
+          {sales.length === 0
+            ? "Nenhuma venda lançada ainda."
+            : onlyOwed
+              ? "Ninguém deve nada no momento."
+              : search
+                ? "Nenhuma venda encontrada para essa busca."
+                : "Nenhuma venda nesse mês."}
         </p>
       ) : (
         <>
@@ -288,6 +353,7 @@ export default function VendasPage() {
           onClose={() => setShowNewSale(false)}
           onSaved={() => {
             setShowNewSale(false);
+            setViewMonth(currentYearMonth());
             load();
           }}
         />
