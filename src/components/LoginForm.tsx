@@ -70,6 +70,14 @@ export function LoginForm() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+        <a
+          href="https://t.me/nick_ki"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 block text-center text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300"
+        >
+          Problemas para entrar? Fale com o suporte
+        </a>
       </div>
     </div>
   );
