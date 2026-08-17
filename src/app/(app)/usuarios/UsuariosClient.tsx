@@ -8,11 +8,20 @@ type User = {
   role: "admin" | "user";
   active: boolean;
   createdAt: string;
+  lastSeenAt: string | null;
 };
 
 function formatDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("pt-BR");
+}
+
+function formatLastSeen(iso: string | null) {
+  if (!iso) return "nunca";
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("pt-BR");
+  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} ${time}`;
 }
 
 const ACCESS_LABEL: Record<string, string> = {
@@ -347,7 +356,8 @@ export function UsuariosClient() {
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-zinc-500">
-                  {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · acesso:{" "}
+                  {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · último acesso:{" "}
+                  {formatLastSeen(u.lastSeenAt)} · acesso:{" "}
                   {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
                 </p>
                 <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
@@ -358,14 +368,15 @@ export function UsuariosClient() {
 
           {/* Tabela — telas médias pra cima */}
           <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
-            <table className="w-full min-w-[640px] table-fixed text-sm">
+            <table className="w-full min-w-[820px] table-fixed text-sm">
               <colgroup>
-                <col className="w-[24%]" />
+                <col className="w-[18%]" />
+                <col className="w-[7%]" />
+                <col className="w-[8%]" />
                 <col className="w-[9%]" />
-                <col className="w-[11%]" />
-                <col className="w-[13%]" />
-                <col className="w-[11%]" />
-                <col className="w-[32%]" />
+                <col className="w-[16%]" />
+                <col className="w-[9%]" />
+                <col className="w-[33%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
@@ -373,6 +384,7 @@ export function UsuariosClient() {
                   <th className="px-4 py-2">Papel</th>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Desde</th>
+                  <th className="px-4 py-2">Último acesso</th>
                   <th className="px-4 py-2">Acesso</th>
                   <th className="px-4 py-2"></th>
                 </tr>
@@ -392,6 +404,7 @@ export function UsuariosClient() {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-2 text-zinc-400">{formatLastSeen(u.lastSeenAt)}</td>
                     <td className="px-4 py-2 text-zinc-400">
                       {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
                     </td>

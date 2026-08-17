@@ -64,5 +64,13 @@ export const getSessionUser = cache(async (): Promise<CurrentUser | null> => {
     await run(`DELETE FROM sessions WHERE token = $1`, [token]);
     return null;
   }
+
+  // Marca "último acesso" pro admin acompanhar uso — o WHERE evita escrever
+  // no banco a cada requisição (só atualiza se já faz mais de 2 minutos).
+  await run(
+    `UPDATE users SET last_seen_at = now() WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < now() - interval '2 minutes')`,
+    [row.id]
+  );
+
   return { id: row.id, email: row.email, role: row.role === "admin" ? "admin" : "user" };
 });

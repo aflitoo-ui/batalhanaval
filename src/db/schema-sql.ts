@@ -166,4 +166,8 @@ ALTER TABLE sales ALTER COLUMN customer_name DROP NOT NULL;
 
 -- Observação por pagamento (ex: "recebi 20 no dinheiro e 100 no pix").
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- Último acesso: pro admin ver na aba Usuários se cada conta está sendo
+-- usada de verdade. Atualizado (com throttle) a cada validação de sessão.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
 `;
