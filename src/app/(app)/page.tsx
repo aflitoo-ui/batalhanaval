@@ -770,7 +770,6 @@ function PaymentsModal({
               value={paymentNotes}
               onChange={(e) => setPaymentNotes(e.target.value)}
               className="input"
-              placeholder='Ex: "20 no dinheiro e 100 no pix"'
             />
           </Field>
           {error && <p className="text-sm text-red-400">{error}</p>}
