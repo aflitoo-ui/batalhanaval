@@ -72,6 +72,39 @@ export function UsuariosClient() {
   const [grantId, setGrantId] = useState<number | null>(null);
   const [grantDays, setGrantDays] = useState("");
   const [historyUserId, setHistoryUserId] = useState<number | null>(null);
+  // position: fixed (calculada a partir do botão "⋮" ao abrir), não
+  // absolute — a tabela tem overflow-x-auto, e por regra do CSS isso faz o
+  // overflow-y computar pra "auto" também, cortando um menu absolute perto
+  // do fim da tabela. Fixed escapa desse corte.
+  const [menuAnchor, setMenuAnchor] = useState<{
+    id: number;
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
+    openUpward: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!menuAnchor) return;
+    function onClick(e: MouseEvent) {
+      if (!(e.target as Element).closest("[data-actions-menu]")) setMenuAnchor(null);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuAnchor(null);
+    }
+    function onScroll() {
+      setMenuAnchor(null);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("scroll", onScroll, true);
+    };
+  }, [menuAnchor]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -316,62 +349,127 @@ export function UsuariosClient() {
         </div>
       );
     }
+    const accessStatus = subStatusByUser[u.id]?.status;
+    const isOpen = menuAnchor?.id === u.id;
+
     return (
-      <div className={`flex flex-wrap items-center ${justify} gap-2`}>
-        {subStatusByUser[u.id]?.status === "granted" ? (
-          <>
-            <button
-              onClick={() => {
-                const days = subStatusByUser[u.id]?.daysLeft;
-                setGrantDays(days ? String(days) : "");
-                setGrantId(u.id);
-              }}
-              className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
-            >
-              editar dias
-            </button>
-            <button onClick={() => setConfirmRevokeId(u.id)} className="text-xs font-medium text-red-400 hover:text-red-300">
-              revogar liberação
-            </button>
-          </>
-        ) : subStatusByUser[u.id]?.status === "active" ? (
-          <span className="text-xs text-zinc-600">assinatura paga</span>
-        ) : subStatusByUser[u.id]?.status === "canceled" &&
-          (subStatusByUser[u.id]?.daysLeft ?? 0) > 0 ? (
-          <span className="text-xs text-zinc-600">pago até o fim do período</span>
-        ) : (
-          <button onClick={() => setGrantId(u.id)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
-            liberar acesso
-          </button>
-        )}
-        <button onClick={() => setHistoryUserId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
-          histórico
+      <div data-actions-menu className={`flex ${justify}`}>
+        <button
+          onClick={(e) => {
+            if (isOpen) {
+              setMenuAnchor(null);
+              return;
+            }
+            const rect = e.currentTarget.getBoundingClientRect();
+            // Menu de até ~7 itens não passa de uns 260px de altura — se não
+            // couber embaixo do botão, abre pra cima em vez de cortar no
+            // fim da tela.
+            const openUpward = rect.bottom + 260 > window.innerHeight;
+            setMenuAnchor({
+              id: u.id,
+              top: rect.bottom + 4,
+              bottom: window.innerHeight - rect.top + 4,
+              left: rect.left,
+              right: rect.right,
+              openUpward,
+            });
+          }}
+          aria-label="Ações"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+        >
+          ⋮
         </button>
-        {u.telegramLinked && (
-          <button
-            onClick={() => handleTelegramReset(u)}
-            className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+        {isOpen && menuAnchor && (
+          <div
+            data-actions-menu
+            style={{
+              position: "fixed",
+              ...(menuAnchor.openUpward ? { bottom: menuAnchor.bottom } : { top: menuAnchor.top }),
+              ...(align === "end"
+                ? { right: window.innerWidth - menuAnchor.right }
+                : { left: menuAnchor.left }),
+            }}
+            className="z-20 w-52 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900 py-1 text-left shadow-xl"
           >
-            desvincular Telegram
-          </button>
+            {accessStatus === "granted" ? (
+              <>
+                <MenuItem
+                  onClick={() => {
+                    const days = subStatusByUser[u.id]?.daysLeft;
+                    setGrantDays(days ? String(days) : "");
+                    setGrantId(u.id);
+                    setMenuAnchor(null);
+                  }}
+                >
+                  editar dias
+                </MenuItem>
+                <MenuItem
+                  tone="danger"
+                  onClick={() => {
+                    setConfirmRevokeId(u.id);
+                    setMenuAnchor(null);
+                  }}
+                >
+                  revogar liberação
+                </MenuItem>
+              </>
+            ) : accessStatus === "active" || (accessStatus === "canceled" && (subStatusByUser[u.id]?.daysLeft ?? 0) > 0) ? null : (
+              <MenuItem
+                tone="success"
+                onClick={() => {
+                  setGrantId(u.id);
+                  setMenuAnchor(null);
+                }}
+              >
+                liberar acesso
+              </MenuItem>
+            )}
+            <MenuItem
+              onClick={() => {
+                setHistoryUserId(u.id);
+                setMenuAnchor(null);
+              }}
+            >
+              histórico
+            </MenuItem>
+            {u.telegramLinked && (
+              <MenuItem
+                onClick={() => {
+                  setMenuAnchor(null);
+                  handleTelegramReset(u);
+                }}
+              >
+                desvincular Telegram
+              </MenuItem>
+            )}
+            <MenuItem
+              onClick={() => {
+                setResetId(u.id);
+                setMenuAnchor(null);
+              }}
+            >
+              redefinir senha
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                setMenuAnchor(null);
+                toggleActive(u);
+              }}
+            >
+              {u.active ? "desativar" : "reativar"}
+            </MenuItem>
+            <div className="my-1 border-t border-zinc-800" />
+            <MenuItem
+              tone="danger"
+              onClick={() => {
+                setConfirmDeleteId(u.id);
+                setMenuAnchor(null);
+              }}
+            >
+              excluir
+            </MenuItem>
+          </div>
         )}
-        <button onClick={() => setResetId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
-          redefinir senha
-        </button>
-        <button
-          onClick={() => toggleActive(u)}
-          className={`text-xs font-medium ${
-            u.active ? "text-zinc-500 hover:text-red-400" : "text-zinc-400 hover:text-emerald-400"
-          }`}
-        >
-          {u.active ? "desativar" : "reativar"}
-        </button>
-        <button
-          onClick={() => setConfirmDeleteId(u.id)}
-          className="text-xs font-medium text-zinc-500 hover:text-red-400"
-        >
-          excluir
-        </button>
       </div>
     );
   }
@@ -515,5 +613,23 @@ export function UsuariosClient() {
         <SubscriptionHistoryModal userId={historyUserId} onClose={() => setHistoryUserId(null)} />
       )}
     </div>
+  );
+}
+
+function MenuItem({
+  children,
+  onClick,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  tone?: "danger" | "success";
+}) {
+  const color =
+    tone === "danger" ? "text-red-400 hover:bg-red-950/40" : tone === "success" ? "text-emerald-400 hover:bg-emerald-950/40" : "text-zinc-300 hover:bg-zinc-800";
+  return (
+    <button onClick={onClick} className={`block w-full px-3 py-1.5 text-left text-sm font-medium transition ${color}`}>
+      {children}
+    </button>
   );
 }
