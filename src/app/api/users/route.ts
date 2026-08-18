@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { all, get, withTransaction } from "@/db/pool";
 import { getSessionUser, hashPassword } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
+import { logAdminAction } from "@/lib/adminLog";
 import { createUserSchema } from "@/lib/schemas";
 
 export const GET = withApiErrors("users.GET", async () => {
@@ -48,6 +49,12 @@ export const POST = withApiErrors("users.POST", async (req: NextRequest) => {
       );
     }
     return newUser?.id;
+  });
+  await logAdminAction({
+    adminId: user.id,
+    action: "create_user",
+    targetUserId: id ?? null,
+    details: parsed.data.email,
   });
   return NextResponse.json({ id }, { status: 201 });
 });

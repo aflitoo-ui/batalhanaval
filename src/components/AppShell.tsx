@@ -78,7 +78,12 @@ export default function AppShell({
   }, [daysLeft]);
   const nav =
     user.role === "admin"
-      ? [...NAV, { href: "/usuarios", label: "Usuários" }, { href: "/admin/assinaturas", label: "Assinaturas" }]
+      ? [
+          ...NAV,
+          { href: "/usuarios", label: "Usuários" },
+          { href: "/admin/assinaturas", label: "Assinaturas" },
+          { href: "/admin/log", label: "Log" },
+        ]
       : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
 
   // Fecha o menu mobile sozinho quando a rota muda (clicou num link).

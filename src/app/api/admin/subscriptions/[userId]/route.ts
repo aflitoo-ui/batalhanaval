@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { all, get, run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
+import { logAdminAction } from "@/lib/adminLog";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -81,6 +82,12 @@ export const PATCH = withApiErrors(
 
     if (parsed.data.action === "revoke") {
       await run(`UPDATE subscriptions SET status = 'expired', updated_at = now() WHERE id = $1`, [sub.id]);
+      await logAdminAction({
+        adminId: admin.id,
+        action: "revoke_access",
+        targetUserId: Number(userId),
+        details: "revogado",
+      });
       return NextResponse.json({ ok: true, status: "expired" });
     }
 
@@ -91,11 +98,23 @@ export const PATCH = withApiErrors(
         `UPDATE subscriptions SET status = 'granted', trial_ends_at = now() + make_interval(days => $2), updated_at = now() WHERE id = $1`,
         [sub.id, parsed.data.days]
       );
+      await logAdminAction({
+        adminId: admin.id,
+        action: "grant_access",
+        targetUserId: Number(userId),
+        details: `liberado por ${parsed.data.days} dias`,
+      });
     } else {
       await run(
         `UPDATE subscriptions SET status = 'granted', trial_ends_at = NULL, updated_at = now() WHERE id = $1`,
         [sub.id]
       );
+      await logAdminAction({
+        adminId: admin.id,
+        action: "grant_access",
+        targetUserId: Number(userId),
+        details: "liberado sem prazo",
+      });
     }
     return NextResponse.json({ ok: true, status: "granted" });
   }

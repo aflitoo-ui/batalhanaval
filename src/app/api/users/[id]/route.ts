@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { run } from "@/db/pool";
+import { get, run } from "@/db/pool";
 import { getSessionUser, hashPassword } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
+import { logAdminAction } from "@/lib/adminLog";
 import { updateUserSchema } from "@/lib/schemas";
 
 export const PATCH = withApiErrors(
@@ -52,6 +53,33 @@ export const PATCH = withApiErrors(
       await run(`DELETE FROM sessions WHERE user_id = $1`, [id]);
     }
 
+    // Uma única requisição pode mexer em mais de um campo (ex: reativar +
+    // trocar senha) — loga uma linha por campo que de fato veio no corpo,
+    // todas apontando pro mesmo alvo.
+    const targetUserId = Number(id);
+    if (parsed.data.active !== undefined) {
+      await logAdminAction({
+        adminId: user.id,
+        action: parsed.data.active ? "reactivate_user" : "deactivate_user",
+        targetUserId,
+      });
+    }
+    if (parsed.data.role !== undefined) {
+      await logAdminAction({
+        adminId: user.id,
+        action: "change_role",
+        targetUserId,
+        details: `novo papel: ${parsed.data.role}`,
+      });
+    }
+    if (parsed.data.password !== undefined) {
+      await logAdminAction({
+        adminId: user.id,
+        action: "reset_password",
+        targetUserId,
+      });
+    }
+
     return NextResponse.json({ ok: true });
   }
 );
@@ -68,12 +96,23 @@ export const DELETE = withApiErrors(
       return NextResponse.json({ error: "Você não pode excluir a própria conta." }, { status: 400 });
     }
 
+    // Busca o e-mail antes de excluir — depois do DELETE a linha some, e o
+    // log de auditoria (target_user_id ON DELETE SET NULL) precisa de um
+    // jeito de continuar legível mesmo com o usuário já apagado.
+    const target = await get<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [id]);
+
     // Apaga em cascata produtos, vendas, assinatura e sessões desse usuário
     // (chaves estrangeiras com ON DELETE CASCADE) — ação irreversível.
     const result = await run(`DELETE FROM users WHERE id = $1`, [id]);
     if (result.rowCount === 0) {
       return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
     }
+    await logAdminAction({
+      adminId: user.id,
+      action: "delete_user",
+      targetUserId: null,
+      details: target?.email || `id ${id}`,
+    });
     return NextResponse.json({ ok: true });
   }
 );

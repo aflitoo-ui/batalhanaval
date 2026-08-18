@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { get, withTransaction } from "@/db/pool";
 import { withApiErrors } from "@/lib/api-errors";
 import { getPaymentProvider } from "@/lib/payments";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 // Endpoint chamado pelo Asaas, nunca pelo navegador do usuário — a
 // autenticação é o token de webhook (verifyWebhookSignature), não sessão.
@@ -28,17 +29,23 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
     return NextResponse.json({ ok: true }); // já processado — gateway reenviou
   }
 
-  await withTransaction(async (tx) => {
+  // Captura o e-mail do usuário afetado (se a assinatura for conhecida) pra
+  // poder mandar o alerta do Telegram depois que a transação confirmar —
+  // uma chamada de API externa não tem por que fazer parte da transação
+  // do banco.
+  const alertTarget = await withTransaction(async (tx) => {
     await tx.get(
       `INSERT INTO webhook_events (provider, event_id, payload, processed_at) VALUES ('asaas', $1, $2, now())`,
       [eventId, rawBody]
     );
 
-    const sub = await tx.get<{ id: number }>(
-      `SELECT id FROM subscriptions WHERE provider_subscription_id = $1`,
+    const sub = await tx.get<{ id: number; email: string }>(
+      `SELECT s.id, u.email FROM subscriptions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.provider_subscription_id = $1`,
       [event.providerSubscriptionId]
     );
-    if (!sub) return; // assinatura desconhecida (ex: teste do painel Asaas) — só registra o evento
+    if (!sub) return null; // assinatura desconhecida (ex: teste do painel Asaas) — só registra o evento
 
     switch (event.type) {
       case "payment_approved": {
@@ -79,7 +86,29 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
         await tx.get(`UPDATE subscriptions SET status = 'expired', updated_at = now() WHERE id = $1`, [sub.id]);
         break;
     }
+
+    return {
+      type: event.type,
+      email: sub.email,
+      amount: event.type === "payment_approved" ? event.amount : undefined,
+    };
   });
+
+  // Fora da transação (já commitada) — uma chamada de API externa não tem
+  // por que fazer parte da transação do banco.
+  if (alertTarget) {
+    const amountBRL = alertTarget.amount?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const messages: Record<string, string> = {
+      payment_approved: `✅ Pagamento aprovado: ${alertTarget.email} — ${amountBRL}`,
+      payment_failed: `⚠️ Pagamento falhou: ${alertTarget.email}`,
+      payment_refunded: `💸 Pagamento estornado: ${alertTarget.email}`,
+      payment_chargeback: `🚫 Chargeback: ${alertTarget.email}`,
+      subscription_canceled: `❌ Assinatura cancelada: ${alertTarget.email}`,
+      subscription_expired: `❌ Assinatura expirada: ${alertTarget.email}`,
+    };
+    const text = messages[alertTarget.type];
+    if (text) await sendTelegramAlert(text);
+  }
 
   return NextResponse.json({ ok: true });
 });

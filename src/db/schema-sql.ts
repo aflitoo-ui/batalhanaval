@@ -179,4 +179,24 @@ ALTER TABLE sales ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 -- somar/descontar algo que não é calculado por quantidade x preço, tipo uma
 -- dívida antiga incluída no total. Entra direto no total/deve/lucro.
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS adjustment NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+-- Log de ações administrativas (liberar/revogar acesso, criar/excluir
+-- usuário, redefinir senha, etc.) — trilha de auditoria pro dono do sistema
+-- ver "quem fez o quê". target_user_id usa ON DELETE SET NULL porque excluir
+-- usuário é uma das ações logadas: o registro do log tem que sobreviver à
+-- exclusão que ele está documentando (por isso details sempre traz o e-mail
+-- do alvo também, pra continuar legível mesmo depois do join virar null).
+CREATE TABLE IF NOT EXISTS admin_log (
+  id SERIAL PRIMARY KEY,
+  admin_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  target_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  details TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_admin_log_created ON admin_log(created_at DESC);
+
+-- Marca se já foi enviado o alerta de "acesso perto de vencer" (Telegram) pra
+-- essa assinatura, pra não notificar todo dia enquanto faltam os 3 dias.
+ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS expiry_alert_sent_at TIMESTAMPTZ;
 `;
