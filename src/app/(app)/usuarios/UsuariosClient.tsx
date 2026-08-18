@@ -68,6 +68,7 @@ export function UsuariosClient() {
   const [resetPassword, setResetPassword] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
+  const [confirmTelegramResetId, setConfirmTelegramResetId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [grantId, setGrantId] = useState<number | null>(null);
   const [grantDays, setGrantDays] = useState("");
@@ -295,6 +296,28 @@ export function UsuariosClient() {
         </div>
       );
     }
+    if (confirmTelegramResetId === u.id) {
+      return (
+        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+          <span className="text-xs text-zinc-400">Desvincular o Telegram desse usuário?</span>
+          <button
+            onClick={() => {
+              setConfirmTelegramResetId(null);
+              handleTelegramReset(u);
+            }}
+            className="text-xs font-medium text-red-400 hover:text-red-300"
+          >
+            sim
+          </button>
+          <button
+            onClick={() => setConfirmTelegramResetId(null)}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            não
+          </button>
+        </div>
+      );
+    }
     if (grantId === u.id) {
       return (
         <div className={`flex flex-wrap items-center ${justify} gap-2`}>
@@ -434,9 +457,10 @@ export function UsuariosClient() {
             </MenuItem>
             {u.telegramLinked && (
               <MenuItem
+                tone="danger"
                 onClick={() => {
                   setMenuAnchor(null);
-                  handleTelegramReset(u);
+                  setConfirmTelegramResetId(u.id);
                 }}
               >
                 desvincular Telegram
