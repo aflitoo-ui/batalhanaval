@@ -40,15 +40,15 @@ type SubInfo = { status: string; daysLeft: number | null };
 function accessLabel(sub: SubInfo | undefined): string {
   if (!sub) return "-";
   const base = ACCESS_LABEL[sub.status] || sub.status;
-  if (sub.status === "granted" && sub.daysLeft === null) return `${base} · para sempre`;
+  if (sub.status === "granted" && sub.daysLeft === null) return `${base} · sempre`;
   if (sub.status === "trialing" || sub.status === "granted") {
-    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · ${sub.daysLeft}d restantes` : base;
+    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · ${sub.daysLeft}d` : base;
   }
   if (sub.status === "active") {
-    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · renova em ${sub.daysLeft}d` : base;
+    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · ${sub.daysLeft}d` : base;
   }
   if (sub.status === "canceled") {
-    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · acesso até ${sub.daysLeft}d` : base;
+    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · ${sub.daysLeft}d` : base;
   }
   return base;
 }
@@ -388,12 +388,12 @@ export function UsuariosClient() {
           <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
             <table className="w-full min-w-[820px] table-fixed text-sm">
               <colgroup>
-                <col className="w-[18%]" />
+                <col className="w-[16%]" />
                 <col className="w-[7%]" />
                 <col className="w-[8%]" />
                 <col className="w-[9%]" />
-                <col className="w-[16%]" />
-                <col className="w-[9%]" />
+                <col className="w-[12%]" />
+                <col className="w-[15%]" />
                 <col className="w-[33%]" />
               </colgroup>
               <thead>
@@ -423,7 +423,7 @@ export function UsuariosClient() {
                     </td>
                     <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
                     <td className="px-4 py-2 text-zinc-400">{formatLastSeen(u.lastSeenAt)}</td>
-                    <td className="px-4 py-2 text-zinc-400">
+                    <td className="whitespace-nowrap px-4 py-2 text-zinc-400">
                       {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
                     </td>
                     <td className="px-4 py-2">
