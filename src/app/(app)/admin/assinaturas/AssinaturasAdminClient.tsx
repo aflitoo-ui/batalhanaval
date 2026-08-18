@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SubscriptionHistoryModal } from "@/components/SubscriptionHistoryModal";
 
 type Row = {
   userId: number;
@@ -46,6 +47,7 @@ export function AssinaturasAdminClient() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [historyUserId, setHistoryUserId] = useState<number | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -91,7 +93,11 @@ export function AssinaturasAdminClient() {
       ) : (
         <div className="space-y-3 md:hidden">
           {filteredRows.map((r) => (
-            <div key={r.userId} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+            <div
+              key={r.userId}
+              onClick={() => setHistoryUserId(r.userId)}
+              className="cursor-pointer rounded-lg border border-zinc-800 bg-zinc-900 p-3 transition hover:border-zinc-700"
+            >
               <div className="flex items-start justify-between gap-2">
                 <p className="truncate font-medium text-zinc-200">{r.email}</p>
                 <span className="shrink-0 text-sm font-medium text-zinc-300">
@@ -137,7 +143,11 @@ export function AssinaturasAdminClient() {
               </tr>
             ) : (
               filteredRows.map((r) => (
-                <tr key={r.userId} className="border-b border-zinc-900 last:border-0">
+                <tr
+                  key={r.userId}
+                  onClick={() => setHistoryUserId(r.userId)}
+                  className="cursor-pointer border-b border-zinc-900 transition last:border-0 hover:bg-zinc-900"
+                >
                   <td className="truncate px-4 py-2 font-medium text-zinc-200">{r.email}</td>
                   <td className="px-4 py-2 text-zinc-300">
                     {r.status ? STATUS_LABEL[r.status] || r.status : "-"}
@@ -157,6 +167,10 @@ export function AssinaturasAdminClient() {
           </tbody>
         </table>
       </div>
+
+      {historyUserId !== null && (
+        <SubscriptionHistoryModal userId={historyUserId} onClose={() => setHistoryUserId(null)} />
+      )}
     </div>
   );
 }

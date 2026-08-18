@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SubscriptionHistoryModal } from "@/components/SubscriptionHistoryModal";
 
 type User = {
   id: number;
@@ -69,6 +70,7 @@ export function UsuariosClient() {
   const [search, setSearch] = useState("");
   const [grantId, setGrantId] = useState<number | null>(null);
   const [grantDays, setGrantDays] = useState("");
+  const [historyUserId, setHistoryUserId] = useState<number | null>(null);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -320,6 +322,9 @@ export function UsuariosClient() {
             liberar acesso
           </button>
         )}
+        <button onClick={() => setHistoryUserId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
+          histórico
+        </button>
         <button onClick={() => setResetId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
           redefinir senha
         </button>
@@ -474,6 +479,10 @@ export function UsuariosClient() {
             </table>
           </div>
         </>
+      )}
+
+      {historyUserId !== null && (
+        <SubscriptionHistoryModal userId={historyUserId} onClose={() => setHistoryUserId(null)} />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { get, run } from "@/db/pool";
+import { all, get, run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { z } from "zod";
@@ -8,6 +8,53 @@ const bodySchema = z.object({
   action: z.enum(["grant", "revoke"]),
   days: z.number().int().positive().max(3650).optional(),
 });
+
+// Histórico completo de assinatura + pagamentos de um usuário específico —
+// mesma query de /api/subscriptions/me, só que o admin pode ver qualquer
+// usuário (não só a própria conta).
+export const GET = withApiErrors(
+  "admin.subscriptions.history.GET",
+  async (_req: NextRequest, ctx: { params: Promise<{ userId: string }> }) => {
+    const admin = await getSessionUser();
+    if (!admin) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+    if (admin.role !== "admin") return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
+
+    const { userId } = await ctx.params;
+
+    const target = await get<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [userId]);
+    if (!target) return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+
+    const sub = await get<{
+      id: number;
+      status: string;
+      trialEndsAt: string | null;
+      currentPeriodEnd: string | null;
+      canceledAt: string | null;
+      planName: string;
+      price: string;
+    }>(
+      `SELECT s.id, s.status, s.trial_ends_at as "trialEndsAt", s.current_period_end as "currentPeriodEnd",
+        s.canceled_at as "canceledAt", p.name as "planName", p.price
+       FROM subscriptions s JOIN plans p ON p.id = s.plan_id
+       WHERE s.user_id = $1 ORDER BY s.id DESC LIMIT 1`,
+      [userId]
+    );
+
+    const history = sub
+      ? await all<{ id: number; amount: string; status: string; paidAt: string | null }>(
+          `SELECT id, amount, status, paid_at as "paidAt" FROM payments_history
+           WHERE subscription_id = $1 ORDER BY created_at DESC`,
+          [sub.id]
+        )
+      : [];
+
+    return NextResponse.json({
+      email: target.email,
+      subscription: sub ? { ...sub, price: Number(sub.price) } : null,
+      history: history.map((h) => ({ ...h, amount: Number(h.amount) })),
+    });
+  }
+);
 
 // Libera acesso pra um usuário específico sem cobrar (ex: conta de cortesia)
 // ou desfaz isso depois. Não mexe no gateway de pagamento — é só um estado
