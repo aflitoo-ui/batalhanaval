@@ -663,7 +663,7 @@ function LastSeenCell({ iso, now }: { iso: string | null; now: number }) {
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-        <span className="font-medium text-emerald-400">online agora</span>
+        <span className="font-medium text-emerald-400">online</span>
       </span>
     );
   }
