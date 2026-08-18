@@ -90,7 +90,24 @@ function currentYearMonth() {
 }
 
 const ADJUSTMENT_HINT =
-  "Use quando o cliente já te devia algum valor atrasado de antes e você quer somar essa dívida ao total dessa venda. Pode ser negativo (ex: -10) pra descontar em vez de somar.";
+  "Use quando o cliente já te devia algum valor atrasado de antes e você quer somar essa dívida ao total dessa venda. Toque no +/− ao lado do campo pra escolher entre somar ou descontar.";
+
+function AdjustmentSignToggle({ negative, onToggle }: { negative: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={negative ? "Descontando do total — toque pra somar" : "Somando ao total — toque pra descontar"}
+      className={`shrink-0 rounded-lg border px-3 text-base font-bold transition ${
+        negative
+          ? "border-red-800 bg-red-950/40 text-red-400 hover:bg-red-950/70"
+          : "border-emerald-800 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-950/70"
+      }`}
+    >
+      {negative ? "−" : "+"}
+    </button>
+  );
+}
 
 export default function VendasPage() {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -790,6 +807,7 @@ function NewSaleModal({
   const [sellPrice, setSellPrice] = useState(String(products[0]?.defaultSellPrice ?? ""));
   const [initialPayment, setInitialPayment] = useState("");
   const [adjustment, setAdjustment] = useState("");
+  const [adjustmentNegative, setAdjustmentNegative] = useState(false);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -826,7 +844,8 @@ function NewSaleModal({
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
     const payment = initialPayment ? Number(initialPayment.replace(",", ".")) : 0;
-    const adj = adjustment ? Number(adjustment.replace(",", ".")) : 0;
+    const adjAbs = adjustment ? Number(adjustment.replace(",", ".")) : 0;
+    const adj = adjustmentNegative ? -adjAbs : adjAbs;
     if (!customer) {
       setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
       return;
@@ -932,13 +951,16 @@ function NewSaleModal({
             </>
           }
         >
-          <input
-            value={adjustment}
-            onChange={(e) => setAdjustment(e.target.value)}
-            className="input"
-            placeholder="0,00"
-            inputMode="decimal"
-          />
+          <div className="flex gap-2">
+            <input
+              value={adjustment}
+              onChange={(e) => setAdjustment(e.target.value.replace(/-/g, ""))}
+              className="input flex-1"
+              placeholder="0,00"
+              inputMode="decimal"
+            />
+            <AdjustmentSignToggle negative={adjustmentNegative} onToggle={() => setAdjustmentNegative((v) => !v)} />
+          </div>
         </Field>
         <Field label="Observação (opcional)">
           <textarea
@@ -984,7 +1006,8 @@ function EditSaleModal({
   const [quantity, setQuantity] = useState(String(sale.quantity));
   const [buyPrice, setBuyPrice] = useState(String(sale.unitBuyPrice));
   const [sellPrice, setSellPrice] = useState(String(sale.unitSellPrice));
-  const [adjustment, setAdjustment] = useState(sale.adjustment ? String(sale.adjustment) : "");
+  const [adjustment, setAdjustment] = useState(sale.adjustment ? String(Math.abs(sale.adjustment)) : "");
+  const [adjustmentNegative, setAdjustmentNegative] = useState(sale.adjustment < 0);
   const [notes, setNotes] = useState(sale.notes || "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1008,7 +1031,8 @@ function EditSaleModal({
     const qty = Number(quantity.replace(",", "."));
     const qp = Number(buyPrice.replace(",", "."));
     const qv = Number(sellPrice.replace(",", "."));
-    const adj = adjustment ? Number(adjustment.replace(",", ".")) : 0;
+    const adjAbs = adjustment ? Number(adjustment.replace(",", ".")) : 0;
+    const adj = adjustmentNegative ? -adjAbs : adjAbs;
     if (!customer) {
       setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
       return;
@@ -1090,13 +1114,16 @@ function EditSaleModal({
             </>
           }
         >
-          <input
-            value={adjustment}
-            onChange={(e) => setAdjustment(e.target.value)}
-            className="input"
-            placeholder="0,00"
-            inputMode="decimal"
-          />
+          <div className="flex gap-2">
+            <input
+              value={adjustment}
+              onChange={(e) => setAdjustment(e.target.value.replace(/-/g, ""))}
+              className="input flex-1"
+              placeholder="0,00"
+              inputMode="decimal"
+            />
+            <AdjustmentSignToggle negative={adjustmentNegative} onToggle={() => setAdjustmentNegative((v) => !v)} />
+          </div>
         </Field>
         <Field label="Observação (opcional)">
           <textarea
