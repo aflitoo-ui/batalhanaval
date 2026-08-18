@@ -68,6 +68,7 @@ function daysSince(iso: string) {
   return Math.round((today.getTime() - saleDate.getTime()) / 86400000);
 }
 
+
 const MONTH_NAMES = [
   "Janeiro",
   "Fevereiro",
@@ -397,7 +398,9 @@ export default function VendasPage() {
                   <div>
                     <p className="text-[11px] text-zinc-500">Deve</p>
                     <p className="font-medium text-red-400">{s.owed > 0 ? formatBRL(s.owed) : "-"}</p>
-                    {s.owed > 0 && <p className="text-[10px] text-zinc-500">há {daysSince(s.saleDate)}d</p>}
+                    {s.owed > 0 && daysSince(s.saleDate) > 0 && (
+                      <p className="text-[10px] text-zinc-500">há {daysSince(s.saleDate)}d</p>
+                    )}
                   </div>
                   <div>
                     <p className="text-[11px] text-zinc-500">Lucro</p>
@@ -459,7 +462,9 @@ export default function VendasPage() {
                     <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
                     <td className="px-3 py-2 text-right font-medium text-red-400">
                       {s.owed > 0 ? formatBRL(s.owed) : "-"}
-                      {s.owed > 0 && <span className="ml-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>}
+                      {s.owed > 0 && daysSince(s.saleDate) > 0 && (
+                        <span className="ml-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
                     <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
