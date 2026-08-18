@@ -290,7 +290,7 @@ export function UsuariosClient() {
             >
               editar dias
             </button>
-            <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
+            <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-red-400 hover:text-red-300">
               revogar liberação
             </button>
           </>
