@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { CurrentUser } from "@/lib/auth";
 import { useIdleLogout } from "@/lib/useIdleLogout";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
@@ -194,7 +195,9 @@ export default function AppShell({
           </div>
         )}
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      <PullToRefresh>
+        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      </PullToRefresh>
     </div>
   );
 }
