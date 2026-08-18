@@ -35,9 +35,27 @@ const ACCESS_LABEL: Record<string, string> = {
   none: "Sem assinatura",
 };
 
+type SubInfo = { status: string; daysLeft: number | null };
+
+function accessLabel(sub: SubInfo | undefined): string {
+  if (!sub) return "-";
+  const base = ACCESS_LABEL[sub.status] || sub.status;
+  if (sub.status === "granted" && sub.daysLeft === null) return `${base} · para sempre`;
+  if (sub.status === "trialing" || sub.status === "granted") {
+    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · ${sub.daysLeft}d restantes` : base;
+  }
+  if (sub.status === "active") {
+    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · renova em ${sub.daysLeft}d` : base;
+  }
+  if (sub.status === "canceled") {
+    return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · acesso até ${sub.daysLeft}d` : base;
+  }
+  return base;
+}
+
 export function UsuariosClient() {
   const [users, setUsers] = useState<User[]>([]);
-  const [subStatusByUser, setSubStatusByUser] = useState<Record<number, string>>({});
+  const [subStatusByUser, setSubStatusByUser] = useState<Record<number, SubInfo>>({});
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -62,9 +80,9 @@ export function UsuariosClient() {
     const usersData = await usersRes.json();
     const subsData = await subsRes.json().catch(() => null);
     setUsers(usersData.users || []);
-    const map: Record<number, string> = {};
+    const map: Record<number, SubInfo> = {};
     for (const s of subsData?.subscriptions || []) {
-      if (s.status) map[s.userId] = s.status;
+      if (s.status) map[s.userId] = { status: s.status, daysLeft: s.daysLeft ?? null };
     }
     setSubStatusByUser(map);
     setLoading(false);
@@ -261,10 +279,10 @@ export function UsuariosClient() {
     return (
       <div className={`flex flex-wrap items-center ${justify} gap-2`}>
         <button
-          onClick={() => (subStatusByUser[u.id] === "granted" ? handleRevoke(u) : setGrantId(u.id))}
+          onClick={() => (subStatusByUser[u.id]?.status === "granted" ? handleRevoke(u) : setGrantId(u.id))}
           className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
         >
-          {subStatusByUser[u.id] === "granted" ? "revogar liberação" : "liberar acesso"}
+          {subStatusByUser[u.id]?.status === "granted" ? "revogar liberação" : "liberar acesso"}
         </button>
         <button onClick={() => setResetId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
           redefinir senha
@@ -358,7 +376,7 @@ export function UsuariosClient() {
                 <p className="mt-1 text-xs text-zinc-500">
                   {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · último acesso:{" "}
                   {formatLastSeen(u.lastSeenAt)} · acesso:{" "}
-                  {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
+                  {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
                 </p>
                 <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
                 {rowError && rowError.id === u.id && <p className="mt-1 text-xs text-red-400">{rowError.message}</p>}
@@ -406,7 +424,7 @@ export function UsuariosClient() {
                     <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
                     <td className="px-4 py-2 text-zinc-400">{formatLastSeen(u.lastSeenAt)}</td>
                     <td className="px-4 py-2 text-zinc-400">
-                      {u.role === "admin" ? "-" : ACCESS_LABEL[subStatusByUser[u.id]] || subStatusByUser[u.id] || "-"}
+                      {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
                     </td>
                     <td className="px-4 py-2">
                       {renderActions(u, "end")}
