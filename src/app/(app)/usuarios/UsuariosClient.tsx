@@ -234,7 +234,7 @@ export function UsuariosClient() {
             autoFocus
           />
           <button onClick={() => handleGrant(u)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
-            liberar
+            {subStatusByUser[u.id]?.status === "granted" ? "salvar" : "liberar"}
           </button>
           <button
             onClick={() => {
@@ -278,12 +278,27 @@ export function UsuariosClient() {
     }
     return (
       <div className={`flex flex-wrap items-center ${justify} gap-2`}>
-        <button
-          onClick={() => (subStatusByUser[u.id]?.status === "granted" ? handleRevoke(u) : setGrantId(u.id))}
-          className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
-        >
-          {subStatusByUser[u.id]?.status === "granted" ? "revogar liberação" : "liberar acesso"}
-        </button>
+        {subStatusByUser[u.id]?.status === "granted" ? (
+          <>
+            <button
+              onClick={() => {
+                const days = subStatusByUser[u.id]?.daysLeft;
+                setGrantDays(days ? String(days) : "");
+                setGrantId(u.id);
+              }}
+              className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+            >
+              editar dias
+            </button>
+            <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
+              revogar liberação
+            </button>
+          </>
+        ) : (
+          <button onClick={() => setGrantId(u.id)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
+            liberar acesso
+          </button>
+        )}
         <button onClick={() => setResetId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
           redefinir senha
         </button>
