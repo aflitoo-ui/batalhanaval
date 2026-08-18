@@ -374,8 +374,12 @@ export default function AssinaturaPage() {
               {history.map((h) => (
                 <tr key={h.id} className="border-b border-zinc-900 last:border-0">
                   <td className="py-1.5 text-zinc-400">{formatDate(h.paidAt)}</td>
-                  <td className="py-1.5 text-zinc-300">{h.status}</td>
-                  <td className="py-1.5 text-right text-zinc-200">{formatBRL(h.amount)}</td>
+                  <td className="py-1.5 text-zinc-300">
+                    {h.status === "telegram_bonus" ? "🎁 Bônus Telegram" : h.status}
+                  </td>
+                  <td className="py-1.5 text-right text-zinc-200">
+                    {h.status === "telegram_bonus" ? `+${h.amount}d` : formatBRL(h.amount)}
+                  </td>
                 </tr>
               ))}
             </tbody>

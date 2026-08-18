@@ -77,15 +77,15 @@ export default function AppShell({
     }, 5000);
     return () => clearTimeout(t);
   }, [daysLeft]);
-  const nav =
+  const businessNav = user.role === "admin" ? NAV : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
+  const adminNav =
     user.role === "admin"
       ? [
-          ...NAV,
           { href: "/usuarios", label: "Usuários" },
           { href: "/admin/assinaturas", label: "Assinaturas" },
           { href: "/admin/log", label: "Log" },
         ]
-      : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
+      : [];
 
   // Fecha o menu mobile sozinho quando a rota muda (clicou num link).
   useEffect(() => {
@@ -130,8 +130,22 @@ export default function AppShell({
               </Link>
               <span className="text-lg font-bold tracking-tight text-[#946ce0]">STRIX</span>
             </div>
-            <nav className="hidden gap-1 md:flex">
-              {nav.map((item) => (
+            <nav className="hidden items-center gap-1 md:flex">
+              {businessNav.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                    pathname === item.href
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              {adminNav.length > 0 && <div className="mx-1 h-5 w-px bg-zinc-800" />}
+              {adminNav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -175,7 +189,21 @@ export default function AppShell({
         {menuOpen && (
           <div className="border-t border-zinc-800 px-4 py-3 md:hidden">
             <nav className="flex flex-col gap-1">
-              {nav.map((item) => (
+              {businessNav.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                    pathname === item.href
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              {adminNav.length > 0 && <div className="my-2 border-t border-zinc-800" />}
+              {adminNav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

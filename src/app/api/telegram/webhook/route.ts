@@ -94,6 +94,15 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
         );
       }
 
+      // Registra o bônus no histórico de pagamentos — não é dinheiro, mas é
+      // o mesmo lugar que a pessoa (ou o admin, se ela reclamar "não
+      // recebi") já consulta pra ver o que aconteceu com a conta.
+      await tx.get(
+        `INSERT INTO payments_history (subscription_id, amount, status, paid_at)
+         VALUES ($1, $2, 'telegram_bonus', now())`,
+        [sub.id, LINK_BONUS_DAYS]
+      );
+
       return { bonusApplied: true };
     });
 
