@@ -100,6 +100,7 @@ export default function VendasPage() {
   const [showNewSale, setShowNewSale] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
   const [editSaleId, setEditSaleId] = useState<number | null>(null);
+  const [detailSaleId, setDetailSaleId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [onlyOwed, setOnlyOwed] = useState(false);
@@ -372,7 +373,11 @@ export default function VendasPage() {
           {/* Cartões — telas pequenas */}
           <div className="space-y-3 md:hidden">
             {filteredSales.map((s) => (
-              <div key={s.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+              <div
+                key={s.id}
+                onClick={() => setDetailSaleId(s.id)}
+                className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 active:bg-zinc-800/50"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium text-amber-400">{s.customerName}</p>
@@ -408,7 +413,10 @@ export default function VendasPage() {
                     <p className="text-zinc-200">{formatBRL(s.profit)}</p>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-zinc-800 pt-2">
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-3 flex flex-wrap items-center justify-end gap-3 border-t border-zinc-800 pt-2"
+                >
                   <RowActions s={s} />
                 </div>
               </div>
@@ -510,6 +518,10 @@ export default function VendasPage() {
         />
       )}
 
+      {detailSaleId !== null && (
+        <SaleDetailModal sale={sales.find((s) => s.id === detailSaleId)!} onClose={() => setDetailSaleId(null)} />
+      )}
+
       {paymentSaleId !== null && (
         <PaymentsModal
           sale={sales.find((s) => s.id === paymentSaleId)!}
@@ -584,6 +596,46 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
         {children}
       </div>
     </div>
+  );
+}
+
+function DetailRow({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-zinc-800 py-2 text-sm last:border-0">
+      <span className="text-zinc-500">{label}</span>
+      <span className={tone || "text-zinc-200"}>{value}</span>
+    </div>
+  );
+}
+
+function SaleDetailModal({ sale: s, onClose }: { sale: Sale; onClose: () => void }) {
+  return (
+    <ModalShell title="Detalhes da venda" onClose={onClose}>
+      <div className="mb-3">
+        <p className="font-medium text-amber-400">{s.customerName ?? "Sem cliente"}</p>
+        <p className="text-xs text-zinc-500">{formatDate(s.saleDate)}</p>
+      </div>
+      <div>
+        <DetailRow label="Produto" value={s.productName} />
+        <DetailRow label="Quantidade" value={`${s.quantity}x`} />
+        <DetailRow label="Custo unitário" value={formatBRL(s.unitBuyPrice)} />
+        <DetailRow label="Venda unitária" value={formatBRL(s.unitSellPrice)} />
+        <DetailRow label="Subtotal (qtd × venda)" value={formatBRL(s.quantity * s.unitSellPrice)} />
+        {s.adjustment !== 0 && (
+          <DetailRow label="Ajuste" value={`${s.adjustment > 0 ? "+" : ""}${formatBRL(s.adjustment)}`} />
+        )}
+        <DetailRow label="Total" value={formatBRL(s.total)} tone="font-medium text-zinc-100" />
+        <DetailRow label="Pagou" value={formatBRL(s.paid)} tone="text-emerald-400" />
+        <DetailRow label="Deve" value={s.owed > 0 ? formatBRL(s.owed) : "-"} tone="font-medium text-red-400" />
+        <DetailRow label="Lucro" value={formatBRL(s.profit)} tone="text-zinc-100" />
+      </div>
+      {s.notes && (
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+          <p className="text-xs text-zinc-500">Observação</p>
+          <p className="mt-1 text-sm italic text-zinc-300">{s.notes}</p>
+        </div>
+      )}
+    </ModalShell>
   );
 }
 
