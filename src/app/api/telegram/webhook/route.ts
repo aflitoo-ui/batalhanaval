@@ -103,7 +103,7 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
         String(chatId)
       );
     } else if (linked) {
-      await sendTelegramAlert("✅ Telegram vinculado com sucesso!", String(chatId));
+      await sendTelegramAlert("✅ Telegram vinculado com sucesso! (bônus de dias já recebido anteriormente)", String(chatId));
     }
   }
 
