@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { CurrentUser } from "@/lib/auth";
 import { useIdleLogout } from "@/lib/useIdleLogout";
 import PullToRefresh from "@/components/PullToRefresh";
+import TelegramLinkPopup from "@/components/TelegramLinkPopup";
 
 const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
@@ -99,6 +100,9 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-zinc-950 pt-[env(safe-area-inset-top)] text-zinc-100">
+      {/* Admin já tem canal de alerta próprio fixo (TELEGRAM_CHAT_ID via env) —
+          esse popup é só pra clientes vincularem o Telegram deles. */}
+      {user.role !== "admin" && <TelegramLinkPopup />}
       {bannerVisible && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-4 py-1.5 text-center text-sm text-amber-300">
           {subscriptionStatusMessage(subscriptionStatus, daysLeft ?? 0)}{" "}

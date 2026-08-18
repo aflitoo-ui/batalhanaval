@@ -18,8 +18,14 @@ export const GET = withApiErrors("cron.trialAlerts.GET", async (req: NextRequest
   // trial/acesso liberado com prazo vencendo nos próximos 3 dias (e ainda no
   // futuro) e que ainda não recebeu o alerta — cada assinatura só é
   // notificada uma vez, não todo dia enquanto faltam os 3 dias.
-  const rows = await all<{ subscriptionId: number; email: string; trialEndsAt: string }>(
-    `SELECT s.id as "subscriptionId", u.email, s.trial_ends_at as "trialEndsAt"
+  const rows = await all<{
+    subscriptionId: number;
+    email: string;
+    trialEndsAt: string;
+    telegramChatId: string | null;
+  }>(
+    `SELECT s.id as "subscriptionId", u.email, s.trial_ends_at as "trialEndsAt",
+      u.telegram_chat_id as "telegramChatId"
      FROM subscriptions s
      JOIN users u ON u.id = s.user_id
      WHERE s.status IN ('trialing', 'granted')
@@ -32,6 +38,15 @@ export const GET = withApiErrors("cron.trialAlerts.GET", async (req: NextRequest
   for (const row of rows) {
     const daysLeft = Math.max(0, Math.ceil((new Date(row.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
     await sendTelegramAlert(`⏳ ${row.email} — acesso termina em ${daysLeft} dia${daysLeft === 1 ? "" : "s"}`);
+    // Mesmo evento, mesmo guard (expiry_alert_sent_at) — se o cliente
+    // vinculou o próprio Telegram, ele recebe um aviso direto, com um texto
+    // endereçado a ele em vez do resumo administrativo acima.
+    if (row.telegramChatId) {
+      await sendTelegramAlert(
+        `⏳ Seu acesso no STRIX termina em ${daysLeft} dia${daysLeft === 1 ? "" : "s"} — renove pra não perder o acesso.`,
+        row.telegramChatId
+      );
+    }
     await run(`UPDATE subscriptions SET expiry_alert_sent_at = now() WHERE id = $1`, [row.subscriptionId]);
   }
 

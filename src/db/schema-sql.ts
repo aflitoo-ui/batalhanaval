@@ -199,4 +199,15 @@ CREATE INDEX IF NOT EXISTS idx_admin_log_created ON admin_log(created_at DESC);
 -- Marca se já foi enviado o alerta de "acesso perto de vencer" (Telegram) pra
 -- essa assinatura, pra não notificar todo dia enquanto faltam os 3 dias.
 ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS expiry_alert_sent_at TIMESTAMPTZ;
+
+-- Vínculo opcional do Telegram do próprio cliente (não um telefone — a
+-- anonimidade do produto é preservada, Telegram não exige compartilhar
+-- número com o bot). telegram_chat_id preenchido = vinculado.
+-- telegram_link_code é o código de uso único do deep link
+-- (t.me/<bot>?start=<code>), gerado sob demanda e zerado assim que o
+-- webhook do bot confirma o vínculo. telegram_popup_dismissed é o opt-out
+-- permanente ("não tenho Telegram") pra não insistir de novo.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_link_code TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_popup_dismissed BOOLEAN NOT NULL DEFAULT false;
 `;
