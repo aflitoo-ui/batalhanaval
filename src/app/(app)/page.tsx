@@ -461,10 +461,10 @@ export default function VendasPage() {
                     </td>
                     <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
                     <td className="px-3 py-2 text-right font-medium text-red-400">
-                      {s.owed > 0 ? formatBRL(s.owed) : "-"}
                       {s.owed > 0 && daysSince(s.saleDate) > 0 && (
-                        <span className="ml-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>
+                        <span className="mr-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>
                       )}
+                      {s.owed > 0 ? formatBRL(s.owed) : "-"}
                     </td>
                     <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
                     <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
