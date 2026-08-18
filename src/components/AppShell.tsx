@@ -59,7 +59,22 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [bannerVisible, setBannerVisible] = useState(false);
   useIdleLogout(IDLE_LOGOUT_MS);
+
+  // Mostra o aviso de assinatura por só 5s e some sozinho — reaparece de
+  // novo só no próximo login (a marca fica em sessionStorage, que o
+  // LoginForm limpa a cada login bem-sucedido), não a cada navegação.
+  useEffect(() => {
+    if (daysLeft === undefined) return;
+    if (sessionStorage.getItem("strix_banner_seen")) return;
+    setBannerVisible(true);
+    const t = setTimeout(() => {
+      setBannerVisible(false);
+      sessionStorage.setItem("strix_banner_seen", "1");
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [daysLeft]);
   const nav =
     user.role === "admin"
       ? [...NAV, { href: "/usuarios", label: "Usuários" }, { href: "/admin/assinaturas", label: "Assinaturas" }]
@@ -78,9 +93,9 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-zinc-950 pt-[env(safe-area-inset-top)] text-zinc-100">
-      {daysLeft !== undefined && (
+      {bannerVisible && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-4 py-1.5 text-center text-sm text-amber-300">
-          {subscriptionStatusMessage(subscriptionStatus, daysLeft)}{" "}
+          {subscriptionStatusMessage(subscriptionStatus, daysLeft ?? 0)}{" "}
           <Link href="/assinatura" className="font-medium underline underline-offset-2">
             {subscriptionStatus === "canceled" ? "Ver assinatura" : "Assinar agora"}
           </Link>
