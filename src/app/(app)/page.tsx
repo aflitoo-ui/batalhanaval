@@ -62,6 +62,12 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function daysSince(iso: string) {
+  const saleDate = new Date(iso.split("T")[0] + "T00:00:00");
+  const today = new Date(todayISO() + "T00:00:00");
+  return Math.round((today.getTime() - saleDate.getTime()) / 86400000);
+}
+
 const MONTH_NAMES = [
   "Janeiro",
   "Fevereiro",
@@ -96,6 +102,7 @@ export default function VendasPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [onlyOwed, setOnlyOwed] = useState(false);
+  const [debtAgeFilter, setDebtAgeFilter] = useState(0);
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
   const [showArchiveMonth, setShowArchiveMonth] = useState(false);
   const [archiveBlockedMsg, setArchiveBlockedMsg] = useState<string | null>(null);
@@ -146,8 +153,9 @@ export default function VendasPage() {
         return y === viewMonth.year && m === viewMonth.month + 1;
       })
       .filter((s) => !q || (s.customerName || "").toLowerCase().includes(q))
-      .filter((s) => !onlyOwed || s.owed > 0);
-  }, [sales, search, onlyOwed, viewMonth]);
+      .filter((s) => !onlyOwed || s.owed > 0)
+      .filter((s) => !onlyOwed || debtAgeFilter === 0 || daysSince(s.saleDate) >= debtAgeFilter);
+  }, [sales, search, onlyOwed, viewMonth, debtAgeFilter]);
 
   const totals = useMemo(() => {
     return filteredSales.reduce(
@@ -280,7 +288,10 @@ export default function VendasPage() {
           className="input max-w-xs"
         />
         <button
-          onClick={() => setOnlyOwed((v) => !v)}
+          onClick={() => {
+            setOnlyOwed((v) => !v);
+            setDebtAgeFilter(0);
+          }}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
             onlyOwed
               ? "bg-red-950 text-red-400"
@@ -290,6 +301,24 @@ export default function VendasPage() {
           Só quem deve
         </button>
       </div>
+
+      {onlyOwed && (
+        <div className="flex flex-wrap gap-2">
+          {[0, 30, 60, 90].map((days) => (
+            <button
+              key={days}
+              onClick={() => setDebtAgeFilter(days)}
+              className={`rounded-md px-2.5 py-1 text-xs font-medium transition ${
+                debtAgeFilter === days
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+              }`}
+            >
+              {days === 0 ? "Todos" : `+${days} dias`}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
@@ -335,6 +364,7 @@ export default function VendasPage() {
                   <div>
                     <p className="text-[11px] text-zinc-500">Deve</p>
                     <p className="font-medium text-red-400">{s.owed > 0 ? formatBRL(s.owed) : "-"}</p>
+                    {s.owed > 0 && <p className="text-[10px] text-zinc-500">há {daysSince(s.saleDate)}d</p>}
                   </div>
                   <div>
                     <p className="text-[11px] text-zinc-500">Lucro</p>
@@ -396,6 +426,7 @@ export default function VendasPage() {
                     <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
                     <td className="px-3 py-2 text-right font-medium text-red-400">
                       {s.owed > 0 ? formatBRL(s.owed) : "-"}
+                      {s.owed > 0 && <span className="ml-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>}
                     </td>
                     <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
                     <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
