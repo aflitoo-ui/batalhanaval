@@ -5,7 +5,7 @@ import { withApiErrors } from "@/lib/api-errors";
 import { customerSchema } from "@/lib/schemas";
 import { requireActiveAccess } from "@/lib/subscription";
 
-type CustomerRow = { id: number; name: string; phone: string | null; active: boolean };
+type CustomerRow = { id: number; name: string; phone: string | null; active: boolean; createdAt: string };
 
 export const GET = withApiErrors("customers.GET", async () => {
   const user = await getSessionUser();
@@ -14,7 +14,7 @@ export const GET = withApiErrors("customers.GET", async () => {
   if (denied) return denied;
 
   const rows = await all<CustomerRow>(
-    `SELECT id, name, phone, active FROM customers WHERE user_id = $1 ORDER BY name ASC`,
+    `SELECT id, name, phone, active, created_at as "createdAt" FROM customers WHERE user_id = $1 ORDER BY name ASC`,
     [user.id]
   );
   return NextResponse.json({ customers: rows });

@@ -7,6 +7,7 @@ type Customer = {
   name: string;
   phone: string | null;
   active: boolean;
+  createdAt: string;
 };
 
 type SaleDate = { customerId: number | null; saleDate: string };
@@ -51,10 +52,13 @@ export default function ClientesPage() {
       .filter((c) => c.active)
       .map((c) => {
         const last = lastPurchaseByCustomer.get(c.id);
-        return { customer: c, days: last ? daysSince(last) : null };
+        // Cliente que nunca comprou usa a data de cadastro como referência —
+        // um cliente recém-criado não teve tempo de "ficar inativo" ainda.
+        const daysInactive = last ? daysSince(last) : daysSince(c.createdAt);
+        return { customer: c, days: last ? daysInactive : null, daysInactive };
       })
-      .filter((entry) => entry.days === null || entry.days >= INACTIVE_DAYS_THRESHOLD)
-      .sort((a, b) => (b.days ?? Infinity) - (a.days ?? Infinity));
+      .filter((entry) => entry.daysInactive >= INACTIVE_DAYS_THRESHOLD)
+      .sort((a, b) => b.daysInactive - a.daysInactive);
   }, [customers, sales]);
 
   async function load() {
