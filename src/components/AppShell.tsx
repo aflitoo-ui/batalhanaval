@@ -77,7 +77,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+    <div className="min-h-screen bg-zinc-950 pt-[env(safe-area-inset-top)] text-zinc-100">
       {daysLeft !== undefined && (
         <div className="border-b border-amber-900/50 bg-amber-950/40 px-4 py-1.5 text-center text-sm text-amber-300">
           {subscriptionStatusMessage(subscriptionStatus, daysLeft)}{" "}
