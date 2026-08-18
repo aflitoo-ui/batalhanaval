@@ -284,6 +284,7 @@ export default function AssinaturaPage() {
 
             <div className="mt-5 flex gap-3">
               {(subscription.status === "trialing" ||
+                subscription.status === "granted" ||
                 subscription.status === "expired" ||
                 subscription.status === "canceled" ||
                 subscription.status === "past_due" ||
