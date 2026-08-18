@@ -289,7 +289,7 @@ export function UsuariosClient() {
           </button>
           <button
             onClick={() => setConfirmDeleteId(null)}
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
           >
             não
           </button>
@@ -305,7 +305,7 @@ export function UsuariosClient() {
           </button>
           <button
             onClick={() => setConfirmRevokeId(null)}
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
           >
             não
           </button>
@@ -327,7 +327,7 @@ export function UsuariosClient() {
           </button>
           <button
             onClick={() => setConfirmTelegramResetId(null)}
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
           >
             não
           </button>

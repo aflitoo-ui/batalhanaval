@@ -286,7 +286,7 @@ export default function ClientesPage() {
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
                           >
                             não
                           </button>
@@ -398,7 +398,7 @@ export default function ClientesPage() {
                               </button>
                               <button
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                                className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
                               >
                                 não
                               </button>

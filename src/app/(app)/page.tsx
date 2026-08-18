@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Product = {
   id: number;
@@ -203,7 +203,7 @@ export default function VendasPage() {
           </button>
           <button
             onClick={() => setConfirmDeleteId(null)}
-            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
           >
             não
           </button>
@@ -845,23 +845,21 @@ function NewSaleModal({
             </select>
           </Field>
         </div>
-        <Field label="Cliente">
-          <CustomerPicker
-            customers={customers}
-            value={customer}
-            onChange={setCustomer}
-            onCustomerCreated={onCustomerCreated}
-            autoFocus
-          />
-        </Field>
+        <CustomerPicker
+          customers={customers}
+          value={customer}
+          onChange={setCustomer}
+          onCustomerCreated={onCustomerCreated}
+          autoFocus
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Quantidade">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
           </Field>
-          <Field label="Quanto você pagou?">
+          <Field label="Preço de custo">
             <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
-          <Field label="A quanto você vende?">
+          <Field label="Preço de venda">
             <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
@@ -1014,23 +1012,21 @@ function EditSaleModal({
             </select>
           </Field>
         </div>
-        <Field label="Cliente">
-          <CustomerPicker
-            customers={customerOptions}
-            value={customer}
-            onChange={setCustomer}
-            onCustomerCreated={onCustomerCreated}
-            autoFocus
-          />
-        </Field>
+        <CustomerPicker
+          customers={customerOptions}
+          value={customer}
+          onChange={setCustomer}
+          onCustomerCreated={onCustomerCreated}
+          autoFocus
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Quantidade">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
           </Field>
-          <Field label="Quanto você pagou?">
+          <Field label="Preço de custo">
             <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
-          <Field label="A quanto você vende?">
+          <Field label="Preço de venda">
             <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
@@ -1179,7 +1175,7 @@ function PaymentsModal({
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                        className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
                       >
                         não
                       </button>
@@ -1263,6 +1259,7 @@ function CustomerPicker({
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const q = query.trim().toLowerCase();
   const filtered = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
@@ -1297,9 +1294,31 @@ function CustomerPicker({
     setOpen(false);
   }
 
+  function handleCreateButtonClick() {
+    if (q && !exactMatch) {
+      handleCreate();
+      return;
+    }
+    setOpen(true);
+    inputRef.current?.focus();
+  }
+
   return (
-    <div className="relative">
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-medium text-zinc-400">Cliente</span>
+        <button
+          type="button"
+          onClick={handleCreateButtonClick}
+          disabled={creating}
+          className="rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+        >
+          {creating ? "Criando..." : "+ Criar cliente"}
+        </button>
+      </div>
+      <div className="relative">
       <input
+        ref={inputRef}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -1364,6 +1383,7 @@ function CustomerPicker({
           )}
         </div>
       )}
+      </div>
       {createError && <p className="mt-1 text-xs text-red-400">{createError}</p>}
     </div>
   );
