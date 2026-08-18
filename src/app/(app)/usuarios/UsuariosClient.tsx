@@ -26,6 +26,15 @@ function formatLastSeen(iso: string | null) {
   return `${date} ${time}`;
 }
 
+// last_seen_at só atualiza a cada visita (com throttle de 2min — ver
+// getSessionUser em src/lib/auth.ts), então alguém navegando sem parar
+// pode ficar até uns 2min "desatualizado" mesmo online. 3min de folga
+// cobre isso sem precisar de WebSocket/infra nova pra saber quem tá online.
+const ONLINE_THRESHOLD_MS = 3 * 60 * 1000;
+function isOnline(iso: string | null, now: number) {
+  return !!iso && now - new Date(iso).getTime() < ONLINE_THRESHOLD_MS;
+}
+
 const ACCESS_LABEL: Record<string, string> = {
   trialing: "Teste grátis",
   active: "Pago",
@@ -59,6 +68,13 @@ export function UsuariosClient() {
   const [users, setUsers] = useState<User[]>([]);
   const [subStatusByUser, setSubStatusByUser] = useState<Record<number, SubInfo>>({});
   const [loading, setLoading] = useState(true);
+  // Só pra recalcular quem ainda tá "online" com o tempo passando — não
+  // busca nada de novo, o último acesso já vem carregado.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(interval);
+  }, []);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -568,7 +584,7 @@ export function UsuariosClient() {
                 </div>
                 <p className="mt-1 text-xs text-zinc-500">
                   {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · último acesso:{" "}
-                  {formatLastSeen(u.lastSeenAt)} · acesso:{" "}
+                  <LastSeenCell iso={u.lastSeenAt} now={now} /> · acesso:{" "}
                   {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
                 </p>
                 <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
@@ -615,7 +631,9 @@ export function UsuariosClient() {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
-                    <td className="px-4 py-2 text-zinc-400">{formatLastSeen(u.lastSeenAt)}</td>
+                    <td className="px-4 py-2 text-zinc-400">
+                      <LastSeenCell iso={u.lastSeenAt} now={now} />
+                    </td>
                     <td className="whitespace-nowrap px-4 py-2 text-zinc-400">
                       {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
                     </td>
@@ -638,6 +656,18 @@ export function UsuariosClient() {
       )}
     </div>
   );
+}
+
+function LastSeenCell({ iso, now }: { iso: string | null; now: number }) {
+  if (isOnline(iso, now)) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
+        <span className="font-medium text-emerald-400">online agora</span>
+      </span>
+    );
+  }
+  return <>{formatLastSeen(iso)}</>;
 }
 
 function MenuItem({
