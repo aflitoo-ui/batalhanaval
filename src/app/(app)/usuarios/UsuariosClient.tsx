@@ -317,6 +317,9 @@ export function UsuariosClient() {
           </>
         ) : subStatusByUser[u.id]?.status === "active" ? (
           <span className="text-xs text-zinc-600">assinatura paga</span>
+        ) : subStatusByUser[u.id]?.status === "canceled" &&
+          (subStatusByUser[u.id]?.daysLeft ?? 0) > 0 ? (
+          <span className="text-xs text-zinc-600">pago até o fim do período</span>
         ) : (
           <button onClick={() => setGrantId(u.id)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
             liberar acesso
