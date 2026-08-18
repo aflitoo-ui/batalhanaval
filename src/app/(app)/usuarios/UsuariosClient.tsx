@@ -313,6 +313,8 @@ export function UsuariosClient() {
               revogar liberação
             </button>
           </>
+        ) : subStatusByUser[u.id]?.status === "active" ? (
+          <span className="text-xs text-zinc-600">assinatura paga</span>
         ) : (
           <button onClick={() => setGrantId(u.id)} className="text-xs font-medium text-emerald-400 hover:text-emerald-300">
             liberar acesso
