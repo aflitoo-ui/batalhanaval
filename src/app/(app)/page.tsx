@@ -295,6 +295,7 @@ export default function VendasPage() {
               setArchiveBlockedMsg(null);
               setShowArchiveMonth(true);
             }}
+            title="Fechou o mês? Deixe o visual mais clean arquivando os meses que não precisa mais ver."
             className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-900 ${
               totals.owed > 0 ? "hover:text-zinc-300" : "hover:text-amber-400"
             }`}
@@ -422,8 +423,8 @@ export default function VendasPage() {
                   <th className="px-3 py-2">Data</th>
                   <th className="px-3 py-2">Produto</th>
                   <th className="px-3 py-2 text-right">Qtd</th>
-                  <th className="px-3 py-2 text-right">QP</th>
-                  <th className="px-3 py-2 text-right">QV</th>
+                  <th className="px-3 py-2 text-right">Custo</th>
+                  <th className="px-3 py-2 text-right">Venda</th>
                   <th className="px-3 py-2 text-right">Total</th>
                   <th className="px-3 py-2 text-right">Pagou</th>
                   <th className="px-3 py-2 text-right">Deve</th>
