@@ -10,6 +10,7 @@ type User = {
   active: boolean;
   createdAt: string;
   lastSeenAt: string | null;
+  telegramLinked: boolean;
 };
 
 function formatDate(iso: string) {
@@ -206,6 +207,24 @@ export function UsuariosClient() {
     setResetPassword("");
   }
 
+  // Trocar o Telegram vinculado é só o admin quem pode — ver comentário na
+  // rota PATCH /api/users/[id] sobre o motivo (evitar vincular/desvincular
+  // repetido só pra caçar o bônus de dias).
+  async function handleTelegramReset(u: User) {
+    setRowError(null);
+    const res = await fetch(`/api/users/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ telegramReset: true }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
+      return;
+    }
+    load();
+  }
+
   function renderActions(u: User, align: "start" | "end") {
     const justify = align === "end" ? "justify-end" : "justify-start";
     if (u.role === "admin") {
@@ -328,6 +347,14 @@ export function UsuariosClient() {
         <button onClick={() => setHistoryUserId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
           histórico
         </button>
+        {u.telegramLinked && (
+          <button
+            onClick={() => handleTelegramReset(u)}
+            className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+          >
+            desvincular Telegram
+          </button>
+        )}
         <button onClick={() => setResetId(u.id)} className="text-xs font-medium text-zinc-400 hover:text-zinc-200">
           redefinir senha
         </button>

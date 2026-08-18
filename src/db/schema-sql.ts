@@ -210,4 +210,10 @@ ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS expiry_alert_sent_at TIMESTAM
 ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_link_code TEXT UNIQUE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_popup_dismissed BOOLEAN NOT NULL DEFAULT false;
+
+-- Marca permanente de "já recebeu o bônus de vincular o Telegram" — sobrevive
+-- a "Trocar Telegram" (que zera chat_id/code/dismissed) de propósito, pra
+-- ninguém conseguir vincular, trocar, vincular de novo repetidas vezes só
+-- pra somar +5 dias toda hora.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_bonus_granted_at TIMESTAMPTZ;
 `;

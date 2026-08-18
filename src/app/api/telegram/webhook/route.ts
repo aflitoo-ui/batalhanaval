@@ -42,16 +42,18 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
   if (match && chatId !== undefined) {
     const code = match[1].trim();
 
-    // Incentivo pra vincular: +5 dias de acesso, só na primeira vez (o
-    // código vira NULL depois de usado, então um /start repetido com o
-    // mesmo código não bate em ninguém e não soma de novo).
+    // Incentivo pra vincular: +5 dias de acesso, só uma vez POR CONTA (não
+    // por vínculo) — telegram_bonus_granted_at é permanente e sobrevive a
+    // "Trocar Telegram" de propósito, senão daria pra vincular, trocar,
+    // vincular de novo repetidas vezes só pra somar +5 dias toda hora.
     const linked = await withTransaction(async (tx) => {
-      const user = await tx.get<{ id: number }>(
+      const user = await tx.get<{ id: number; telegramBonusGrantedAt: string | null }>(
         `UPDATE users SET telegram_chat_id = $1, telegram_link_code = NULL
-         WHERE telegram_link_code = $2 RETURNING id`,
+         WHERE telegram_link_code = $2 RETURNING id, telegram_bonus_granted_at as "telegramBonusGrantedAt"`,
         [String(chatId), code]
       );
       if (!user) return null;
+      if (user.telegramBonusGrantedAt) return { bonusApplied: false };
 
       const sub = await tx.get<{
         id: number;
@@ -64,6 +66,7 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
         [user.id]
       );
       if (!sub) return { bonusApplied: false };
+      await tx.get(`UPDATE users SET telegram_bonus_granted_at = now() WHERE id = $1`, [user.id]);
 
       if (sub.status === "trialing" || sub.status === "granted") {
         const base = sub.trialEndsAt && new Date(sub.trialEndsAt) > new Date() ? new Date(sub.trialEndsAt) : new Date();

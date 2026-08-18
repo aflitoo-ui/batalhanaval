@@ -63,7 +63,6 @@ export default function AssinaturaPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [waitingPayment, setWaitingPayment] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
-  const [telegramBusy, setTelegramBusy] = useState(false);
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -86,20 +85,6 @@ export default function AssinaturaPage() {
     void load();
     void loadTelegramStatus();
   }, []);
-
-  // "Trocar Telegram" (já vinculado) e "mudei de ideia depois de clicar em
-  // não tenho Telegram" usam a mesma ação — zera o vínculo/dispensa no
-  // servidor e busca o link novo em seguida.
-  async function handleTelegramReset() {
-    setTelegramBusy(true);
-    await fetch("/api/account/telegram-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "reset" }),
-    }).catch(() => {});
-    await loadTelegramStatus();
-    setTelegramBusy(false);
-  }
 
   // Depois de abrir a fatura numa aba nova, fica de olho sozinho — o
   // pagamento acontece lá fora (Asaas) e só sabemos que confirmou quando o
@@ -348,13 +333,18 @@ export default function AssinaturaPage() {
           {telegramStatus.linked ? (
             <>
               <p className="text-sm text-zinc-400">✅ Telegram vinculado — você recebe avisos por lá.</p>
-              <button
-                onClick={handleTelegramReset}
-                disabled={telegramBusy}
-                className="mt-3 text-sm font-medium text-zinc-400 underline underline-offset-2 hover:text-zinc-200 disabled:opacity-60"
-              >
-                Trocar Telegram
-              </button>
+              <p className="mt-2 text-xs text-zinc-500">
+                Quer vincular outro Telegram?{" "}
+                <a
+                  href="https://t.me/nick_ki"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-zinc-300"
+                >
+                  Fale com o suporte
+                </a>
+                .
+              </p>
             </>
           ) : (
             <>

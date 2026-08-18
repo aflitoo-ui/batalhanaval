@@ -19,6 +19,7 @@ const ACTION_LABEL: Record<string, string> = {
   reactivate_user: "Reativou usuário",
   change_role: "Alterou papel",
   reset_password: "Redefiniu senha",
+  reset_telegram: "Desvinculou Telegram",
   delete_user: "Excluiu usuário",
 };
 

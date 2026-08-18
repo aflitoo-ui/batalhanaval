@@ -11,7 +11,9 @@ export const GET = withApiErrors("users.GET", async () => {
   if (user.role !== "admin") return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
 
   const rows = await all(
-    `SELECT id, email, role, active, created_at as "createdAt", last_seen_at as "lastSeenAt" FROM users ORDER BY created_at ASC`
+    `SELECT id, email, role, active, created_at as "createdAt", last_seen_at as "lastSeenAt",
+      telegram_chat_id IS NOT NULL as "telegramLinked"
+     FROM users ORDER BY created_at ASC`
   );
   return NextResponse.json({ users: rows });
 });

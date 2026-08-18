@@ -38,13 +38,30 @@ export const PATCH = withApiErrors(
       fields.push(`password_hash = $${i++}`);
       params.push(hashPassword(parsed.data.password));
     }
-    if (fields.length === 0) {
+    if (fields.length === 0 && !parsed.data.telegramReset) {
       return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
     }
-    params.push(id);
-    const result = await run(`UPDATE users SET ${fields.join(", ")} WHERE id = $${i}`, params);
-    if (result.rowCount === 0) {
-      return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+
+    if (fields.length > 0) {
+      params.push(id);
+      const result = await run(`UPDATE users SET ${fields.join(", ")} WHERE id = $${i}`, params);
+      if (result.rowCount === 0) {
+        return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+      }
+    }
+
+    // Trocar o Telegram vinculado é intencionalmente só do admin (não
+    // self-service) — desvincula (chat_id/código/dispensa) mas mantém
+    // telegram_bonus_granted_at intacto, então um vínculo novo depois disso
+    // não gera um segundo bônus de dias.
+    if (parsed.data.telegramReset) {
+      const result = await run(
+        `UPDATE users SET telegram_chat_id = NULL, telegram_link_code = NULL, telegram_popup_dismissed = false WHERE id = $1`,
+        [id]
+      );
+      if (result.rowCount === 0) {
+        return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+      }
     }
 
     // Senha trocada ou conta desativada: derruba qualquer sessão já aberta
@@ -76,6 +93,13 @@ export const PATCH = withApiErrors(
       await logAdminAction({
         adminId: user.id,
         action: "reset_password",
+        targetUserId,
+      });
+    }
+    if (parsed.data.telegramReset) {
+      await logAdminAction({
+        adminId: user.id,
+        action: "reset_telegram",
         targetUserId,
       });
     }

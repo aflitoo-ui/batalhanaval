@@ -51,13 +51,23 @@ export const POST = withApiErrors("account.telegramLink.POST", async (req: NextR
     return NextResponse.json({ ok: true });
   }
 
-  // "reset" cobre dois casos com a mesma limpeza de estado: trocar de
-  // Telegram (já vinculado, quer ligar uma conta diferente) e "cliquei em
-  // não tenho Telegram sem querer, quero vincular agora" — os dois viram
-  // "sem vínculo, sem dispensa", e o próximo GET já gera um código novo.
+  // "reset" só serve pra desfazer um "Não tenho Telegram" clicado sem
+  // querer (ninguém nunca vinculou nada, então não tem risco de troca
+  // indevida). Uma vez vinculado de verdade, trocar de Telegram exige o
+  // admin (ver PATCH em /api/users/[id]) — de propósito, pra ninguém
+  // conseguir vincular/trocar sozinho quantas vezes quiser.
   if (body?.action === "reset") {
+    const row = await get<{ telegramChatId: string | null }>(`SELECT telegram_chat_id as "telegramChatId" FROM users WHERE id = $1`, [
+      user.id,
+    ]);
+    if (row?.telegramChatId) {
+      return NextResponse.json(
+        { error: "Seu Telegram já está vinculado. Fale com o suporte pra trocar." },
+        { status: 403 }
+      );
+    }
     await run(
-      `UPDATE users SET telegram_chat_id = NULL, telegram_link_code = NULL, telegram_popup_dismissed = false WHERE id = $1`,
+      `UPDATE users SET telegram_link_code = NULL, telegram_popup_dismissed = false WHERE id = $1`,
       [user.id]
     );
     return NextResponse.json({ ok: true });
