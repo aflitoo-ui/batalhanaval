@@ -39,7 +39,7 @@ function subscriptionStatusMessage(status: string | undefined, daysLeft: number)
     return daysLeft > 0 ? `Sua assinatura vence em ${dias}.` : "Sua assinatura vence hoje.";
   }
   if (status === "granted") {
-    return daysLeft > 0 ? `Seu acesso liberado termina em ${dias}.` : "Seu acesso liberado termina hoje.";
+    return daysLeft > 0 ? `Seu acesso termina em: ${dias}.` : "Seu acesso termina hoje.";
   }
   // trialing (padrão)
   return daysLeft > 0 ? `Você tem ${dias} restante${daysLeft === 1 ? "" : "s"} de teste grátis.` : "Seu teste grátis termina hoje.";
