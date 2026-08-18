@@ -39,6 +39,7 @@ export function LoginForm() {
         return;
       }
       sessionStorage.removeItem("strix_banner_seen");
+      localStorage.setItem("strix_last_activity", String(Date.now()));
       router.push("/");
       router.refresh();
     } catch {
