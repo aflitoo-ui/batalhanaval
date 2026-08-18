@@ -59,6 +59,7 @@ export default function AssinaturaPage() {
   const [needsCpfCnpj, setNeedsCpfCnpj] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [info, setInfo] = useState<string | null>(null);
+  const [waitingPayment, setWaitingPayment] = useState(false);
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -67,11 +68,47 @@ export default function AssinaturaPage() {
     setSubscription(data.subscription);
     setHistory(data.history || []);
     setLoading(false);
+    return data.subscription as Subscription | null;
   }
 
   useEffect(() => {
     void load();
   }, []);
+
+  // Depois de abrir a fatura numa aba nova, fica de olho sozinho — o
+  // pagamento acontece lá fora (Asaas) e só sabemos que confirmou quando o
+  // webhook atualizar o banco, então rechecamos periodicamente (e assim que
+  // o usuário volta pra essa aba) até o status virar "active" ou desistir
+  // depois de uns minutos.
+  useEffect(() => {
+    if (!waitingPayment) return;
+    let cancelled = false;
+    let attempts = 0;
+
+    async function poll() {
+      attempts++;
+      const sub = await load();
+      if (cancelled) return;
+      if (sub?.status === "active") {
+        setWaitingPayment(false);
+        setInfo("Pagamento confirmado! Sua assinatura está ativa.");
+      } else if (attempts >= 40) {
+        setWaitingPayment(false);
+      }
+    }
+
+    const interval = setInterval(poll, 5000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [waitingPayment]);
 
   async function handleSubscribe(force = false) {
     setError(null);
@@ -99,6 +136,7 @@ export default function AssinaturaPage() {
     }
     window.open(data.checkoutUrl, "_blank", "noopener,noreferrer");
     setInfo("Abrimos a fatura em uma nova aba. Depois de pagar, o acesso libera sozinho aqui.");
+    setWaitingPayment(true);
   }
 
   async function handleLogout() {
@@ -230,6 +268,7 @@ export default function AssinaturaPage() {
             )}
 
             {info && <p className="mt-3 text-sm text-emerald-400">{info}</p>}
+            {waitingPayment && <p className="mt-1 text-xs text-zinc-500">Checando pagamento...</p>}
             {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
             <div className="mt-5 flex gap-3">
