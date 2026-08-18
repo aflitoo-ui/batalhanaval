@@ -105,7 +105,9 @@ export default function VendasPage() {
   const [debtAgeFilter, setDebtAgeFilter] = useState(0);
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
   const [showArchiveMonth, setShowArchiveMonth] = useState(false);
+  const [showUnarchiveMonth, setShowUnarchiveMonth] = useState(false);
   const [archiveBlockedMsg, setArchiveBlockedMsg] = useState<string | null>(null);
+  const [allSales, setAllSales] = useState<Sale[]>([]);
 
   useEffect(() => {
     if (!archiveBlockedMsg) return;
@@ -114,15 +116,18 @@ export default function VendasPage() {
   }, [archiveBlockedMsg]);
 
   async function load() {
-    const [salesRes, productsRes, customersRes] = await Promise.all([
+    const [salesRes, allSalesRes, productsRes, customersRes] = await Promise.all([
       fetch("/api/sales"),
+      fetch("/api/sales?includeArchived=1"),
       fetch("/api/products"),
       fetch("/api/customers"),
     ]);
     const salesData = await salesRes.json();
+    const allSalesData = await allSalesRes.json();
     const productsData = await productsRes.json();
     const customersData = await customersRes.json();
     setSales(salesData.sales || []);
+    setAllSales(allSalesData.sales || []);
     setProducts(productsData.products || []);
     setCustomers(customersData.customers || []);
     setLoading(false);
@@ -156,6 +161,18 @@ export default function VendasPage() {
       .filter((s) => !onlyOwed || s.owed > 0)
       .filter((s) => !onlyOwed || debtAgeFilter === 0 || daysSince(s.saleDate) >= debtAgeFilter);
   }, [sales, search, onlyOwed, viewMonth, debtAgeFilter]);
+
+  // Um mês só é arquivado por inteiro (a rota de arquivar pega todas as
+  // vendas do mês de uma vez) — então "sem vendas ativas mas com vendas no
+  // includeArchived=1" significa "esse mês está arquivado", não "vazio".
+  const isMonthArchived = useMemo(() => {
+    if (onlyOwed) return false;
+    const inMonth = (s: Sale) => {
+      const [y, m] = s.saleDate.split("T")[0].split("-").map(Number);
+      return y === viewMonth.year && m === viewMonth.month + 1;
+    };
+    return !sales.some(inMonth) && allSales.some(inMonth);
+  }, [sales, allSales, onlyOwed, viewMonth]);
 
   const totals = useMemo(() => {
     return filteredSales.reduce(
@@ -250,7 +267,21 @@ export default function VendasPage() {
         </button>
       </div>
 
-      {!onlyOwed && filteredSales.length > 0 && (
+      {!onlyOwed && isMonthArchived && (
+        <div className="text-center">
+          <p className="text-xs text-zinc-500">
+            🔒 {MONTH_NAMES[viewMonth.month]} de {viewMonth.year} está arquivado.
+          </p>
+          <button
+            onClick={() => setShowUnarchiveMonth(true)}
+            className="mt-1 rounded-md px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:bg-zinc-900 hover:text-amber-400"
+          >
+            desarquivar mês
+          </button>
+        </div>
+      )}
+
+      {!onlyOwed && !isMonthArchived && filteredSales.length > 0 && (
         <div className="text-center">
           <button
             onClick={() => {
@@ -324,13 +355,15 @@ export default function VendasPage() {
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
       ) : filteredSales.length === 0 ? (
         <p className="py-6 text-center text-sm text-zinc-500">
-          {sales.length === 0
-            ? "Nenhuma venda lançada ainda."
-            : onlyOwed
-              ? "Ninguém deve nada no momento."
-              : search
-                ? "Nenhuma venda encontrada para essa busca."
-                : "Nenhuma venda nesse mês."}
+          {isMonthArchived
+            ? "As vendas desse mês estão arquivadas."
+            : sales.length === 0
+              ? "Nenhuma venda lançada ainda."
+              : onlyOwed
+                ? "Ninguém deve nada no momento."
+                : search
+                  ? "Nenhuma venda encontrada para essa busca."
+                  : "Nenhuma venda nesse mês."}
         </p>
       ) : (
         <>
@@ -497,6 +530,19 @@ export default function VendasPage() {
           }}
         />
       )}
+
+      {showUnarchiveMonth && (
+        <UnarchiveMonthModal
+          monthLabel={`${MONTH_NAMES[viewMonth.month]} de ${viewMonth.year}`}
+          year={viewMonth.year}
+          month={viewMonth.month + 1}
+          onClose={() => setShowUnarchiveMonth(false)}
+          onUnarchived={() => {
+            setShowUnarchiveMonth(false);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -583,6 +629,74 @@ function ArchiveMonthModal({
           className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-500 disabled:opacity-60"
         >
           {archiving ? "Arquivando..." : "Arquivar mês"}
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+function UnarchiveMonthModal({
+  monthLabel,
+  year,
+  month,
+  onClose,
+  onUnarchived,
+}: {
+  monthLabel: string;
+  year: number;
+  month: number;
+  onClose: () => void;
+  onUnarchived: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleUnarchive() {
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/sales", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year, month, password }),
+    });
+    const data = await res.json().catch(() => null);
+    setLoading(false);
+    if (!res.ok) {
+      setError(data?.error || "Erro ao desarquivar.");
+      return;
+    }
+    onUnarchived();
+  }
+
+  return (
+    <ModalShell title={`Desarquivar ${monthLabel}?`} onClose={onClose}>
+      <p className="text-sm text-zinc-400">
+        As vendas desse mês voltam a aparecer na lista do dia a dia. Confirme com sua senha de login.
+      </p>
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && password && handleUnarchive()}
+        placeholder="Sua senha"
+        autoFocus
+        className="input mt-3 w-full"
+      />
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+      <div className="mt-5 flex justify-end gap-3">
+        <button
+          onClick={onClose}
+          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleUnarchive}
+          disabled={loading || !password}
+          className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-500 disabled:opacity-60"
+        >
+          {loading ? "Desarquivando..." : "Desarquivar"}
         </button>
       </div>
     </ModalShell>

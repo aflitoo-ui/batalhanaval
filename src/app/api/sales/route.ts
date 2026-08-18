@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { all, get, run, withTransaction } from "@/db/pool";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUser, verifyPassword } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { saleSchema } from "@/lib/schemas";
 import { requireActiveAccess } from "@/lib/subscription";
@@ -178,4 +178,46 @@ export const DELETE = withApiErrors("sales.archiveMonth.DELETE", async (req: Nex
   );
 
   return NextResponse.json({ ok: true, archived: rows.length });
+});
+
+// Desarquiva um mês — pede a senha de login pra confirmar (mesma senha do
+// usuário, checada contra o hash atual, então se ele trocar a senha isso já
+// segue sozinho, não precisa duplicar/sincronizar nada).
+export const PATCH = withApiErrors("sales.unarchiveMonth.PATCH", async (req: NextRequest) => {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  const denied = await requireActiveAccess(user);
+  if (denied) return denied;
+
+  const body = await req.json().catch(() => null);
+  const year = Number(body?.year);
+  const month = Number(body?.month);
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return NextResponse.json({ error: "Mês inválido." }, { status: 400 });
+  }
+  if (!password) {
+    return NextResponse.json({ error: "Informe sua senha." }, { status: 400 });
+  }
+
+  const row = await get<{ passwordHash: string }>(
+    `SELECT password_hash as "passwordHash" FROM users WHERE id = $1`,
+    [user.id]
+  );
+  if (!row || !verifyPassword(password, row.passwordHash)) {
+    return NextResponse.json({ error: "Senha incorreta." }, { status: 401 });
+  }
+
+  const result = await run(
+    `UPDATE sales SET archived_at = NULL
+     WHERE user_id = $1 AND archived_at IS NOT NULL
+       AND EXTRACT(YEAR FROM sale_date) = $2 AND EXTRACT(MONTH FROM sale_date) = $3`,
+    [user.id, year, month]
+  );
+
+  if (result.rowCount === 0) {
+    return NextResponse.json({ error: "Nenhuma venda arquivada encontrada nesse mês." }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true });
 });
