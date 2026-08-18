@@ -84,7 +84,33 @@ export function AssinaturasAdminClient() {
         className="input max-w-xs"
       />
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
+      {filteredRows.length === 0 ? (
+        <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-6 text-center text-sm text-zinc-500 md:hidden">
+          {rows.length === 0 ? "Nenhum usuário ainda." : "Nenhum usuário encontrado para essa busca."}
+        </p>
+      ) : (
+        <div className="space-y-3 md:hidden">
+          {filteredRows.map((r) => (
+            <div key={r.userId} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate font-medium text-zinc-200">{r.email}</p>
+                <span className="shrink-0 text-sm font-medium text-zinc-300">
+                  {r.price ? formatBRL(r.price) : "-"}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">{r.status ? STATUS_LABEL[r.status] || r.status : "-"}</p>
+              <p className="mt-1.5 text-xs text-zinc-500">
+                Próx. cobrança: {formatDate(r.currentPeriodEnd)} ·{" "}
+                <span className={r.daysLeft !== null && r.daysLeft <= 5 ? "font-medium text-amber-400" : ""}>
+                  {formatDaysLeft(r.status, r.daysLeft)}
+                </span>
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="hidden overflow-x-auto rounded-lg border border-zinc-800 md:block">
         <table className="w-full min-w-[560px] table-fixed text-sm">
           <colgroup>
             <col className="w-[30%]" />
