@@ -249,13 +249,13 @@ export default function ProdutosPage() {
                           <span className="text-xs text-zinc-400">Excluir?</span>
                           <button
                             onClick={() => handleDelete(p)}
-                            className="text-xs font-medium text-red-400 hover:text-red-300"
+                            className="text-xs font-medium text-zinc-400 hover:text-emerald-400"
                           >
                             sim
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                            className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
                           >
                             não
                           </button>
@@ -381,13 +381,13 @@ export default function ProdutosPage() {
                             <span className="text-xs text-zinc-400">Excluir?</span>
                             <button
                               onClick={() => handleDelete(p)}
-                              className="text-xs font-medium text-red-400 hover:text-red-300"
+                              className="text-xs font-medium text-zinc-400 hover:text-emerald-400"
                             >
                               sim
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                              className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
                             >
                               não
                             </button>

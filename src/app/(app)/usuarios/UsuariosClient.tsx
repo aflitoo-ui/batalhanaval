@@ -284,12 +284,12 @@ export function UsuariosClient() {
       return (
         <div className={`flex flex-wrap items-center ${justify} gap-2`}>
           <span className="text-xs text-zinc-400">Excluir de vez (perde os dados)?</span>
-          <button onClick={() => handleDelete(u)} className="text-xs font-medium text-red-400 hover:text-red-300">
+          <button onClick={() => handleDelete(u)} className="text-xs font-medium text-zinc-400 hover:text-emerald-400">
             sim
           </button>
           <button
             onClick={() => setConfirmDeleteId(null)}
-            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
           >
             não
           </button>
@@ -300,12 +300,12 @@ export function UsuariosClient() {
       return (
         <div className={`flex flex-wrap items-center ${justify} gap-2`}>
           <span className="text-xs text-zinc-400">Revogar o acesso liberado?</span>
-          <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-red-400 hover:text-red-300">
+          <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-zinc-400 hover:text-emerald-400">
             sim
           </button>
           <button
             onClick={() => setConfirmRevokeId(null)}
-            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
           >
             não
           </button>
@@ -321,13 +321,13 @@ export function UsuariosClient() {
               setConfirmTelegramResetId(null);
               handleTelegramReset(u);
             }}
-            className="text-xs font-medium text-red-400 hover:text-red-300"
+            className="text-xs font-medium text-zinc-400 hover:text-emerald-400"
           >
             sim
           </button>
           <button
             onClick={() => setConfirmTelegramResetId(null)}
-            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
           >
             não
           </button>

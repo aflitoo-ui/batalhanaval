@@ -203,7 +203,7 @@ export default function VendasPage() {
           </button>
           <button
             onClick={() => setConfirmDeleteId(null)}
-            className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+            className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
           >
             não
           </button>
@@ -1175,7 +1175,7 @@ function PaymentsModal({
                       </button>
                       <button
                         onClick={() => setConfirmDeleteId(null)}
-                        className="ml-2 text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                        className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
                       >
                         não
                       </button>
