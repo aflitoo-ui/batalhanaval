@@ -23,13 +23,11 @@ export const GET = withApiErrors("account.telegramLink.GET", async () => {
   if (row.telegramChatId) {
     return NextResponse.json({ linked: true });
   }
-  if (row.telegramPopupDismissed) {
-    return NextResponse.json({ linked: false, dismissed: true });
-  }
 
-  // Gera o código de vínculo sob demanda (na primeira vez que o usuário
-  // chega aqui sem ter dispensado nem vinculado ainda) e persiste — precisa
-  // ser estável entre chamadas pra o link do popup não trocar a cada render.
+  // Mesmo dispensado (telegramPopupDismissed), ainda gera/devolve o link —
+  // o popup (que respeita "dismissed" pra não incomodar de novo) e a tela
+  // "Minha assinatura" (onde a pessoa pode voltar a vincular quando quiser,
+  // mesmo tendo clicado "Não tenho Telegram" antes) usam essa mesma rota.
   let code = row.telegramLinkCode;
   if (!code) {
     code = randomBytes(16).toString("hex");
@@ -39,7 +37,7 @@ export const GET = withApiErrors("account.telegramLink.GET", async () => {
   const botUsername = process.env.TELEGRAM_BOT_USERNAME;
   const deepLink = botUsername ? `https://t.me/${botUsername}?start=${code}` : null;
 
-  return NextResponse.json({ linked: false, dismissed: false, deepLink });
+  return NextResponse.json({ linked: false, dismissed: row.telegramPopupDismissed, deepLink });
 });
 
 export const POST = withApiErrors("account.telegramLink.POST", async (req: NextRequest) => {
@@ -47,10 +45,23 @@ export const POST = withApiErrors("account.telegramLink.POST", async (req: NextR
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
 
   const body = await req.json().catch(() => null);
-  if (body?.action !== "dismiss") {
-    return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
+
+  if (body?.action === "dismiss") {
+    await run(`UPDATE users SET telegram_popup_dismissed = true WHERE id = $1`, [user.id]);
+    return NextResponse.json({ ok: true });
   }
 
-  await run(`UPDATE users SET telegram_popup_dismissed = true WHERE id = $1`, [user.id]);
-  return NextResponse.json({ ok: true });
+  // "reset" cobre dois casos com a mesma limpeza de estado: trocar de
+  // Telegram (já vinculado, quer ligar uma conta diferente) e "cliquei em
+  // não tenho Telegram sem querer, quero vincular agora" — os dois viram
+  // "sem vínculo, sem dispensa", e o próximo GET já gera um código novo.
+  if (body?.action === "reset") {
+    await run(
+      `UPDATE users SET telegram_chat_id = NULL, telegram_link_code = NULL, telegram_popup_dismissed = false WHERE id = $1`,
+      [user.id]
+    );
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
 });

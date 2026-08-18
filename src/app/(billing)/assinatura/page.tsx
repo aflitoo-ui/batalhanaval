@@ -26,6 +26,8 @@ type Subscription = {
 
 type HistoryItem = { id: number; amount: number; status: string; paidAt: string | null };
 
+type TelegramStatus = { linked: true } | { linked: false; dismissed: boolean; deepLink: string | null };
+
 function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -60,6 +62,8 @@ export default function AssinaturaPage() {
   const [cpfCnpj, setCpfCnpj] = useState("");
   const [info, setInfo] = useState<string | null>(null);
   const [waitingPayment, setWaitingPayment] = useState(false);
+  const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
+  const [telegramBusy, setTelegramBusy] = useState(false);
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -71,9 +75,31 @@ export default function AssinaturaPage() {
     return data.subscription as Subscription | null;
   }
 
+  async function loadTelegramStatus() {
+    const res = await fetch("/api/account/telegram-link");
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    if (data) setTelegramStatus(data);
+  }
+
   useEffect(() => {
     void load();
+    void loadTelegramStatus();
   }, []);
+
+  // "Trocar Telegram" (já vinculado) e "mudei de ideia depois de clicar em
+  // não tenho Telegram" usam a mesma ação — zera o vínculo/dispensa no
+  // servidor e busca o link novo em seguida.
+  async function handleTelegramReset() {
+    setTelegramBusy(true);
+    await fetch("/api/account/telegram-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reset" }),
+    }).catch(() => {});
+    await loadTelegramStatus();
+    setTelegramBusy(false);
+  }
 
   // Depois de abrir a fatura numa aba nova, fica de olho sozinho — o
   // pagamento acontece lá fora (Asaas) e só sabemos que confirmou quando o
@@ -315,6 +341,40 @@ export default function AssinaturaPage() {
           <p className="text-sm text-zinc-500">Nenhuma assinatura encontrada. Fale com o administrador.</p>
         )}
       </div>
+
+      {telegramStatus && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-zinc-200">Telegram</h2>
+          {telegramStatus.linked ? (
+            <>
+              <p className="text-sm text-zinc-400">✅ Telegram vinculado — você recebe avisos por lá.</p>
+              <button
+                onClick={handleTelegramReset}
+                disabled={telegramBusy}
+                className="mt-3 text-sm font-medium text-zinc-400 underline underline-offset-2 hover:text-zinc-200 disabled:opacity-60"
+              >
+                Trocar Telegram
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-zinc-400">
+                Vincule seu Telegram pra ser avisado por lá antes do seu acesso terminar.
+              </p>
+              {telegramStatus.deepLink && (
+                <a
+                  href={telegramStatus.deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-block rounded-lg bg-[#3c1a7b] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#5224a8]"
+                >
+                  Vincular Telegram
+                </a>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {history.length > 0 && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
