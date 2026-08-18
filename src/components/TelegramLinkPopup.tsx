@@ -46,6 +46,7 @@ export default function TelegramLinkPopup() {
           Vincule seu Telegram pra ser avisado por lá antes do seu acesso terminar — sem precisar
           compartilhar telefone, só o Telegram mesmo.
         </p>
+        <p className="mt-2 text-sm font-medium text-emerald-400">🎁 Ganhe +5 dias de acesso ao vincular.</p>
         <a
           href={status.deepLink}
           target="_blank"

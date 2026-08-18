@@ -1,7 +1,10 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { run } from "@/db/pool";
+import { withTransaction } from "@/db/pool";
 import { withApiErrors } from "@/lib/api-errors";
+import { sendTelegramAlert } from "@/lib/telegram";
+
+const LINK_BONUS_DAYS = 5;
 
 // Endpoint chamado pelo Telegram (nunca pelo navegador do usuário) sempre
 // que alguém interage com o bot — em especial quando abre o deep link
@@ -38,10 +41,67 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
   const match = typeof text === "string" ? text.match(/^\/start (.+)$/) : null;
   if (match && chatId !== undefined) {
     const code = match[1].trim();
-    await run(
-      `UPDATE users SET telegram_chat_id = $1, telegram_link_code = NULL WHERE telegram_link_code = $2`,
-      [String(chatId), code]
-    );
+
+    // Incentivo pra vincular: +5 dias de acesso, só na primeira vez (o
+    // código vira NULL depois de usado, então um /start repetido com o
+    // mesmo código não bate em ninguém e não soma de novo).
+    const linked = await withTransaction(async (tx) => {
+      const user = await tx.get<{ id: number }>(
+        `UPDATE users SET telegram_chat_id = $1, telegram_link_code = NULL
+         WHERE telegram_link_code = $2 RETURNING id`,
+        [String(chatId), code]
+      );
+      if (!user) return null;
+
+      const sub = await tx.get<{
+        id: number;
+        status: string;
+        trialEndsAt: string | null;
+        currentPeriodEnd: string | null;
+      }>(
+        `SELECT id, status, trial_ends_at as "trialEndsAt", current_period_end as "currentPeriodEnd"
+         FROM subscriptions WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
+        [user.id]
+      );
+      if (!sub) return { bonusApplied: false };
+
+      if (sub.status === "trialing" || sub.status === "granted") {
+        const base = sub.trialEndsAt && new Date(sub.trialEndsAt) > new Date() ? new Date(sub.trialEndsAt) : new Date();
+        base.setDate(base.getDate() + LINK_BONUS_DAYS);
+        await tx.get(`UPDATE subscriptions SET trial_ends_at = $1, updated_at = now() WHERE id = $2`, [
+          base.toISOString(),
+          sub.id,
+        ]);
+      } else if (sub.status === "active" || sub.status === "canceled") {
+        const base =
+          sub.currentPeriodEnd && new Date(sub.currentPeriodEnd) > new Date() ? new Date(sub.currentPeriodEnd) : new Date();
+        base.setDate(base.getDate() + LINK_BONUS_DAYS);
+        await tx.get(`UPDATE subscriptions SET current_period_end = $1, updated_at = now() WHERE id = $2`, [
+          base.toISOString().slice(0, 10),
+          sub.id,
+        ]);
+      } else {
+        // expirado/aguardando pagamento/sem assinatura ativa — um empurrão
+        // de boas-vindas pra pessoa voltar a usar.
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + LINK_BONUS_DAYS);
+        await tx.get(
+          `UPDATE subscriptions SET status = 'granted', trial_ends_at = $1, updated_at = now() WHERE id = $2`,
+          [trialEndsAt.toISOString(), sub.id]
+        );
+      }
+
+      return { bonusApplied: true };
+    });
+
+    if (linked?.bonusApplied) {
+      await sendTelegramAlert(
+        `🎉 Telegram vinculado! Você ganhou +${LINK_BONUS_DAYS} dias de acesso no STRIX.`,
+        String(chatId)
+      );
+    } else if (linked) {
+      await sendTelegramAlert("✅ Telegram vinculado com sucesso!", String(chatId));
+    }
   }
 
   return NextResponse.json({ ok: true });
