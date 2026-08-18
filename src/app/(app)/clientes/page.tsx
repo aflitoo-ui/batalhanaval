@@ -34,6 +34,7 @@ export default function ClientesPage() {
   const [editPhone, setEditPhone] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   const activeCount = customers.filter((c) => c.active).length;
 
@@ -161,18 +162,26 @@ export default function ClientesPage() {
       </div>
 
       {!loading && inactiveCustomers.length > 0 && (
-        <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-amber-400">
-            Clientes inativos (sem comprar há {INACTIVE_DAYS_THRESHOLD}+ dias)
-          </h2>
-          <ul className="space-y-1.5">
-            {inactiveCustomers.map(({ customer, days }) => (
-              <li key={customer.id} className="flex items-center justify-between gap-2 text-sm">
-                <span className="font-medium text-amber-300">{customer.name}</span>
-                <span className="text-xs text-zinc-400">{days === null ? "nunca comprou" : `última compra: há ${days} dias`}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="rounded-lg border border-amber-900/50 bg-amber-950/20">
+          <button
+            onClick={() => setShowInactive((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 p-4 text-left"
+          >
+            <h2 className="text-sm font-semibold text-amber-400">
+              Clientes inativos ({inactiveCustomers.length}) — sem comprar há {INACTIVE_DAYS_THRESHOLD}+ dias
+            </h2>
+            <span className={`shrink-0 text-amber-400 transition-transform ${showInactive ? "rotate-180" : ""}`}>▾</span>
+          </button>
+          {showInactive && (
+            <ul className="max-h-64 space-y-1.5 overflow-y-auto px-4 pb-4">
+              {inactiveCustomers.map(({ customer, days }) => (
+                <li key={customer.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="font-medium text-amber-300">{customer.name}</span>
+                  <span className="text-xs text-zinc-400">{days === null ? "nunca comprou" : `última compra: há ${days} dias`}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
