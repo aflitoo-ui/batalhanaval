@@ -65,6 +65,7 @@ export function UsuariosClient() {
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmRevokeId, setConfirmRevokeId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [grantId, setGrantId] = useState<number | null>(null);
   const [grantDays, setGrantDays] = useState("");
@@ -141,8 +142,10 @@ export function UsuariosClient() {
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
+      setConfirmRevokeId(null);
       return;
     }
+    setConfirmRevokeId(null);
     load();
   }
 
@@ -222,6 +225,22 @@ export function UsuariosClient() {
         </div>
       );
     }
+    if (confirmRevokeId === u.id) {
+      return (
+        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+          <span className="text-xs text-zinc-400">Revogar o acesso liberado?</span>
+          <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-red-400 hover:text-red-300">
+            sim
+          </button>
+          <button
+            onClick={() => setConfirmRevokeId(null)}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            não
+          </button>
+        </div>
+      );
+    }
     if (grantId === u.id) {
       return (
         <div className={`flex flex-wrap items-center ${justify} gap-2`}>
@@ -290,7 +309,7 @@ export function UsuariosClient() {
             >
               editar dias
             </button>
-            <button onClick={() => handleRevoke(u)} className="text-xs font-medium text-red-400 hover:text-red-300">
+            <button onClick={() => setConfirmRevokeId(u.id)} className="text-xs font-medium text-red-400 hover:text-red-300">
               revogar liberação
             </button>
           </>
