@@ -56,8 +56,19 @@ export function SubscriptionHistoryModal({ userId, onClose }: { userId: number; 
     })();
   }, [userId]);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+    >
       <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="truncate text-base font-bold text-zinc-100">{email || "Histórico"}</h2>
