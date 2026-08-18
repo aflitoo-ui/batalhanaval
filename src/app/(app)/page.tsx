@@ -198,7 +198,7 @@ export default function VendasPage() {
       return (
         <>
           <span className="text-xs text-zinc-400">Excluir?</span>
-          <button onClick={() => handleDeleteSale(s.id)} className="text-xs font-medium text-red-400 hover:text-red-300">
+          <button onClick={() => handleDeleteSale(s.id)} className="text-xs font-medium text-zinc-400 hover:text-emerald-400">
             sim
           </button>
           <button
@@ -1169,7 +1169,7 @@ function PaymentsModal({
                       <button
                         onClick={() => handleDeletePayment(h.id)}
                         disabled={deletingId === h.id}
-                        className="text-xs font-medium text-red-400 hover:text-red-300 disabled:opacity-60"
+                        className="text-xs font-medium text-zinc-400 hover:text-emerald-400 disabled:opacity-60"
                       >
                         {deletingId === h.id ? "..." : "sim"}
                       </button>
