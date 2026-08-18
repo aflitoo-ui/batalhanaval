@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Customer = {
   id: number;
@@ -9,8 +9,19 @@ type Customer = {
   active: boolean;
 };
 
+type SaleDate = { customerId: number | null; saleDate: string };
+
+const INACTIVE_DAYS_THRESHOLD = 30;
+
+function daysSince(iso: string) {
+  const d = new Date(iso.split("T")[0] + "T00:00:00");
+  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  return Math.round((today.getTime() - d.getTime()) / 86400000);
+}
+
 export default function ClientesPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [sales, setSales] = useState<SaleDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -26,10 +37,34 @@ export default function ClientesPage() {
 
   const activeCount = customers.filter((c) => c.active).length;
 
+  // Não classifica "sumiu" sozinho — só mostra fatos (última compra há
+  // quantos dias, ou nunca comprou) pra você julgar quem precisa de atenção.
+  const inactiveCustomers = useMemo(() => {
+    const lastPurchaseByCustomer = new Map<number, string>();
+    for (const s of sales) {
+      if (s.customerId == null) continue;
+      const current = lastPurchaseByCustomer.get(s.customerId);
+      if (!current || s.saleDate > current) lastPurchaseByCustomer.set(s.customerId, s.saleDate);
+    }
+    return customers
+      .filter((c) => c.active)
+      .map((c) => {
+        const last = lastPurchaseByCustomer.get(c.id);
+        return { customer: c, days: last ? daysSince(last) : null };
+      })
+      .filter((entry) => entry.days === null || entry.days >= INACTIVE_DAYS_THRESHOLD)
+      .sort((a, b) => (b.days ?? Infinity) - (a.days ?? Infinity));
+  }, [customers, sales]);
+
   async function load() {
-    const res = await fetch("/api/customers");
-    const data = await res.json();
-    setCustomers(data.customers || []);
+    const [customersRes, salesRes] = await Promise.all([
+      fetch("/api/customers"),
+      fetch("/api/sales?includeArchived=1"),
+    ]);
+    const customersData = await customersRes.json();
+    const salesData = await salesRes.json();
+    setCustomers(customersData.customers || []);
+    setSales(salesData.sales || []);
     setLoading(false);
   }
 
@@ -124,6 +159,22 @@ export default function ClientesPage() {
           </span>
         )}
       </div>
+
+      {!loading && inactiveCustomers.length > 0 && (
+        <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-amber-400">
+            Clientes inativos (sem comprar há {INACTIVE_DAYS_THRESHOLD}+ dias)
+          </h2>
+          <ul className="space-y-1.5">
+            {inactiveCustomers.map(({ customer, days }) => (
+              <li key={customer.id} className="flex items-center justify-between gap-2 text-sm">
+                <span className="font-medium text-amber-300">{customer.name}</span>
+                <span className="text-xs text-zinc-400">{days === null ? "nunca comprou" : `última compra: há ${days} dias`}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <form
         onSubmit={handleAdd}
