@@ -38,13 +38,13 @@ export const POST = withApiErrors("users.POST", async (req: NextRequest) => {
       `INSERT INTO users (email, password_hash, role) VALUES ($1, $2, $3) RETURNING id`,
       [parsed.data.email, passwordHash, parsed.data.role || "user"]
     );
-    // Trial de 30 dias, sem cobrança automática — se o cliente não pagar
+    // Trial de 14 dias, sem cobrança automática — se o cliente não pagar
     // depois de usar, o acesso é bloqueado (ver src/lib/subscription.ts).
     const plan = await tx.get<{ id: number }>(`SELECT id FROM plans WHERE code = 'mensal-2990'`);
     if (newUser && plan) {
       await tx.get(
         `INSERT INTO subscriptions (user_id, plan_id, status, trial_ends_at)
-         VALUES ($1, $2, 'trialing', now() + interval '30 days')`,
+         VALUES ($1, $2, 'trialing', now() + interval '14 days')`,
         [newUser.id, plan.id]
       );
     }
