@@ -289,14 +289,14 @@ export function UsuariosClient() {
   async function handleGrantInviteCredit(u: User) {
     setRowError(null);
     const qty = Number(inviteGrantQty);
-    if (!Number.isInteger(qty) || qty <= 0) {
-      setRowError({ id: u.id, message: "Informe uma quantidade válida." });
+    if (!Number.isInteger(qty) || qty < 0) {
+      setRowError({ id: u.id, message: "Informe uma quantidade válida (0 ou mais)." });
       return;
     }
     const res = await fetch(`/api/users/${u.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ grantInviteCredits: qty }),
+      body: JSON.stringify({ inviteCredits: qty }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
@@ -448,7 +448,7 @@ export function UsuariosClient() {
             onClick={() => handleGrantInviteCredit(u)}
             className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
           >
-            liberar
+            salvar
           </button>
           <button
             onClick={() => {
@@ -548,12 +548,12 @@ export function UsuariosClient() {
             <MenuItem
               tone="success"
               onClick={() => {
-                setInviteGrantQty("1");
+                setInviteGrantQty(String(u.inviteCredits));
                 setInviteGrantId(u.id);
                 setMenuAnchor(null);
               }}
             >
-              liberar convites ({u.inviteCredits})
+              editar convites ({u.inviteCredits})
             </MenuItem>
             {u.telegramLinked && (
               <MenuItem

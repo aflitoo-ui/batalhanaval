@@ -65,5 +65,7 @@ export const updateUserSchema = z.object({
   role: z.enum(["admin", "user"]).optional(),
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").optional(),
   telegramReset: z.boolean().optional(),
-  grantInviteCredits: z.number().int().positive().max(1000).optional(),
+  // Valor absoluto (não incremento) — o admin digita quanto o usuário deve
+  // TER, não quanto somar. 0 é válido (revoga todos os créditos restantes).
+  inviteCredits: z.number().int().min(0).max(1000).optional(),
 });

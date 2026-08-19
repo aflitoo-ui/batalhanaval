@@ -38,7 +38,7 @@ export const PATCH = withApiErrors(
       fields.push(`password_hash = $${i++}`);
       params.push(hashPassword(parsed.data.password));
     }
-    if (fields.length === 0 && !parsed.data.telegramReset && !parsed.data.grantInviteCredits) {
+    if (fields.length === 0 && !parsed.data.telegramReset && parsed.data.inviteCredits === undefined) {
       return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
     }
 
@@ -64,11 +64,12 @@ export const PATCH = withApiErrors(
       }
     }
 
-    // O admin escolhe quantos créditos soma de uma vez (diferente do crédito
-    // automático, que só acontece uma vez por conta em src/lib/invites.ts).
-    if (parsed.data.grantInviteCredits) {
-      const result = await run(`UPDATE users SET invite_credits = invite_credits + $1 WHERE id = $2`, [
-        parsed.data.grantInviteCredits,
+    // O admin digita quanto o usuário DEVE TER (valor absoluto), não quanto
+    // somar — diferente do crédito automático de uma vez em
+    // src/lib/invites.ts, que continua sendo um incremento próprio.
+    if (parsed.data.inviteCredits !== undefined) {
+      const result = await run(`UPDATE users SET invite_credits = $1 WHERE id = $2`, [
+        parsed.data.inviteCredits,
         id,
       ]);
       if (result.rowCount === 0) {
@@ -115,12 +116,12 @@ export const PATCH = withApiErrors(
         targetUserId,
       });
     }
-    if (parsed.data.grantInviteCredits) {
+    if (parsed.data.inviteCredits !== undefined) {
       await logAdminAction({
         adminId: user.id,
         action: "grant_invite_credit",
         targetUserId,
-        details: `+${parsed.data.grantInviteCredits}`,
+        details: `definido para ${parsed.data.inviteCredits}`,
       });
     }
 
