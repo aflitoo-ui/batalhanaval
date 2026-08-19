@@ -36,7 +36,7 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
   }
 
   clearRateLimit(rateLimitKey);
-  await createSessionCookie(user.id);
+  const token = await createSessionCookie(user.id);
 
   // Conta admin tem acesso a tudo — avisa sempre que ela logar em produção,
   // pra dar pra notar rápido se não foi você (só em produção pra não virar
@@ -46,5 +46,15 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
     void sendTelegramAlert(`🔐 Login na conta admin (zulu) — IP ${ip}`);
   }
 
-  return NextResponse.json({ user: { id: user.id, email: user.email } });
+  // O token só vai no corpo pro app mobile (identificado por esse header
+  // próprio, que um navegador nunca manda) — ele precisa guardar em
+  // armazenamento seguro porque o cookie jar nativo não é confiável no
+  // Android. Pro navegador web, o Set-Cookie httpOnly acima já basta; expor
+  // o token pra qualquer requisição enfraqueceria a proteção do httpOnly
+  // contra roubo de sessão via XSS.
+  const isMobileClient = req.headers.get("x-strix-client") === "mobile";
+  return NextResponse.json({
+    user: { id: user.id, email: user.email },
+    ...(isMobileClient ? { token } : {}),
+  });
 });

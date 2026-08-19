@@ -34,6 +34,13 @@ export async function createSessionCookie(userId: number) {
     path: "/",
     expires: expiresAt,
   });
+
+  // Devolvido pro caller opcionalmente incluir no corpo da resposta (ver
+  // POST /api/auth/login) — o app mobile (cookie jar nativo não é confiável
+  // no Android) guarda esse token em armazenamento seguro e reenvia manual
+  // no header Cookie. Estritamente aditivo: o navegador web continua usando
+  // só o Set-Cookie acima e ignora esse retorno.
+  return token;
 }
 
 export async function destroySessionCookie() {
