@@ -24,6 +24,11 @@ function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function formatDate(iso: string) {
+  const [, m, d] = iso.split("T")[0].split("-");
+  return `${d}/${m}`;
+}
+
 function daysSince(iso: string) {
   const saleDate = new Date(iso.split("T")[0] + "T00:00:00");
   const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
@@ -109,9 +114,10 @@ const AGE_BUCKETS: [string, number, number][] = [
 
 // Sempre sobre TODAS as vendas (ignora o filtro de período) — é a mesma
 // lógica de "Só quem deve" em Vendas: dívida é uma situação atual, não do
-// mês que você está olhando.
+// mês que você está olhando. Guarda as vendas de cada faixa (não só o
+// total) pra dar pra revelar exatamente quais são ao clicar no card.
 function aggregateDebtAging(sales: Sale[]) {
-  const buckets = AGE_BUCKETS.map(([label]) => ({ label, total: 0, count: 0 }));
+  const buckets = AGE_BUCKETS.map(([label]) => ({ label, total: 0, count: 0, sales: [] as Sale[] }));
   for (const s of sales) {
     if (s.owed <= 0.001) continue;
     const age = daysSince(s.saleDate);
@@ -119,9 +125,10 @@ function aggregateDebtAging(sales: Sale[]) {
     if (idx >= 0) {
       buckets[idx].total += s.owed;
       buckets[idx].count += 1;
+      buckets[idx].sales.push(s);
     }
   }
-  return buckets;
+  return buckets.map((b) => ({ ...b, sales: b.sales.sort((a, c) => c.owed - a.owed) }));
 }
 
 function downloadCSV(filename: string, header: string[], rows: (string | number)[][]) {
@@ -193,7 +200,12 @@ function SummaryCard({ label, value, tone }: { label: string; value: string; ton
   );
 }
 
+// Desativado por enquanto a pedido do dono — o botão nem aparece. Não
+// apagar a lógica: é só trocar pra "true" e o export volta a funcionar.
+const CSV_EXPORT_ENABLED = false;
+
 function ExportButton({ onClick }: { onClick: () => void }) {
+  if (!CSV_EXPORT_ENABLED) return null;
   return (
     <button
       onClick={onClick}
@@ -215,6 +227,7 @@ export default function RelatoriosPage() {
   const [customerSort, setCustomerSort] = useState<CustomerSortKey>("total");
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
   const [allTime, setAllTime] = useState(false);
+  const [expandedAgeBucket, setExpandedAgeBucket] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -368,15 +381,55 @@ export default function RelatoriosPage() {
         {debtAging.every((b) => b.total === 0) ? (
           <p className="py-2 text-sm text-zinc-500">Ninguém deve nada no momento.</p>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {debtAging.map((b) => (
-              <div key={b.label} className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
-                <p className="text-xs text-zinc-500">{b.label}</p>
-                <p className={`mt-1 text-base font-bold ${b.total > 0 ? "text-red-400" : "text-zinc-600"}`}>{formatBRL(b.total)}</p>
-                <p className="text-[11px] text-zinc-600">{b.count} venda(s)</p>
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {debtAging.map((b) => (
+                <button
+                  key={b.label}
+                  onClick={() => b.count > 0 && setExpandedAgeBucket((cur) => (cur === b.label ? null : b.label))}
+                  disabled={b.count === 0}
+                  className={`rounded-lg border p-3 text-left transition ${
+                    expandedAgeBucket === b.label
+                      ? "border-zinc-600 bg-zinc-800"
+                      : "border-zinc-800 bg-zinc-950 hover:border-zinc-700"
+                  } ${b.count === 0 ? "cursor-default opacity-60" : "cursor-pointer"}`}
+                >
+                  <p className="text-xs text-zinc-500">{b.label}</p>
+                  <p className={`mt-1 text-base font-bold ${b.total > 0 ? "text-red-400" : "text-zinc-600"}`}>{formatBRL(b.total)}</p>
+                  <p className="text-[11px] text-zinc-600">{b.count} venda(s){b.count > 0 ? " — ver" : ""}</p>
+                </button>
+              ))}
+            </div>
+            {expandedAgeBucket && (
+              <div className="mt-4 overflow-x-auto rounded-lg border border-zinc-800">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800 bg-zinc-950 text-left text-xs uppercase tracking-wide text-zinc-500">
+                      <th className="px-3 py-2">Cliente</th>
+                      <th className="px-3 py-2">Produto</th>
+                      <th className="px-3 py-2">Data</th>
+                      <th className="px-3 py-2 text-right">Deve</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {debtAging.find((b) => b.label === expandedAgeBucket)?.sales.map((s) => (
+                      <tr
+                        key={s.id}
+                        onClick={s.customerId != null ? () => goToCustomerSales(s.customerName || "") : undefined}
+                        className={`border-b border-zinc-900 last:border-0 ${s.customerId != null ? "cursor-pointer hover:bg-zinc-900/50" : ""}`}
+                        title={s.customerId != null ? "Ver vendas desse cliente" : undefined}
+                      >
+                        <td className="px-3 py-2 font-medium text-amber-400">{s.customerName || "-"}</td>
+                        <td className="px-3 py-2 text-zinc-300">{s.productName}</td>
+                        <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)} ({daysSince(s.saleDate)}d)</td>
+                        <td className="px-3 py-2 text-right font-medium text-red-400">{formatBRL(s.owed)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </Panel>
 
