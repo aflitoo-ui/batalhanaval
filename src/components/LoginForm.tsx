@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
 // caracteres que lembrem um.
@@ -97,6 +98,12 @@ export function LoginForm() {
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
+        <Link
+          href="/cadastro"
+          className="mt-4 block text-center text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300"
+        >
+          Tenho um convite — criar conta
+        </Link>
         <a
           href="https://t.me/nick_ki"
           target="_blank"
