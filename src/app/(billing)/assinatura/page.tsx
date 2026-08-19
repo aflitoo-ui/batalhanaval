@@ -436,8 +436,10 @@ export default function AssinaturaPage() {
           ) : (
             <>
               <p className="text-sm text-zinc-400">
-                Vincule seu Telegram pra ser avisado por lá antes do seu acesso terminar.
+                Vincule seu Telegram: avisos de vencimento e redefinição de senha chegam direto por lá — sem
+                compartilhar telefone.
               </p>
+              <p className="mt-2 text-sm font-medium text-emerald-400">🎁 Ganhe +5 dias de acesso ao vincular.</p>
               {telegramStatus.deepLink && (
                 <a
                   href={telegramStatus.deepLink}

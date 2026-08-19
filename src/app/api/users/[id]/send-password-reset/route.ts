@@ -38,7 +38,7 @@ export const POST = withApiErrors(
 
     const url = `${_req.nextUrl.origin}/redefinir-senha?t=${token}`;
     await sendTelegramAlert(
-      `🔑 O suporte pediu a redefinição da sua senha no STRIX. Toque no link pra escolher uma senha nova (expira em 1h): ${url}`,
+      `🔑 O suporte enviou uma redefinição de senha pra sua conta no STRIX. Toque no link pra escolher a senha nova (expira em 1h): ${url}`,
       target.telegramChatId
     );
 
