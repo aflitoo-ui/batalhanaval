@@ -484,7 +484,11 @@ function VendasPageInner() {
               </thead>
               <tbody>
                 {filteredSales.map((s) => (
-                  <tr key={s.id} className="border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50">
+                  <tr
+                    key={s.id}
+                    onClick={() => setDetailSaleId(s.id)}
+                    className="cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50"
+                  >
                     <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
                     <td className="px-3 py-2 font-medium text-zinc-200">
                       {s.productName}
@@ -518,7 +522,7 @@ function VendasPageInner() {
                     </td>
                     <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
                     <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         <RowActions s={s} />
                       </div>
@@ -1330,13 +1334,22 @@ function PaymentsModal({
             />
           </Field>
           {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
-          >
-            {saving ? "Salvando..." : "Registrar pagamento"}
-          </button>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setAmount(String(Math.round(sale.owed * 100) / 100))}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+            >
+              Quitar tudo
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+            >
+              {saving ? "Salvando..." : "Registrar pagamento"}
+            </button>
+          </div>
         </form>
       ) : (
         <p className="border-t border-zinc-800 pt-3 text-sm text-emerald-400">Pago integralmente.</p>
