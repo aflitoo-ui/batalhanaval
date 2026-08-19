@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { EyeIcon } from "./EyeIcon";
 
 // Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
 // caracteres que lembrem um, pra ninguém acabar escolhendo um login no
@@ -17,6 +18,7 @@ export function SignupForm() {
   const [code, setCode] = useState(searchParams.get("c") || "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -78,14 +80,25 @@ export function SignupForm() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">Senha</label>
-            <input
-              type="password"
-              required
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#946ce0]"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#946ce0]"
+              />
+              <button
+                type="button"
+                tabIndex={-1}
+                aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-zinc-500 hover:text-zinc-300"
+              >
+                <EyeIcon open={showPassword} />
+              </button>
+            </div>
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
