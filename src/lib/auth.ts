@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { randomUUID } from "node:crypto";
 import { get, run } from "@/db/pool";
 
@@ -56,7 +56,22 @@ export async function destroySessionCookie() {
 // independentemente sem disparar mais de uma consulta ao banco.
 export const getSessionUser = cache(async (): Promise<CurrentUser | null> => {
   const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  let token = jar.get(SESSION_COOKIE)?.value;
+
+  // App mobile: manda o token via "Authorization: Bearer" em vez de tentar
+  // forjar o header Cookie — no React Native, o cookie jar nativo do
+  // aparelho frequentemente disputa/sobrescreve um Cookie setado à mão
+  // quando a resposta já trouxe Set-Cookie (o que acontece aqui, sempre),
+  // então o valor que chega ao servidor pode não ser o esperado. Um header
+  // próprio, que nenhuma camada de rede gerencia sozinha, não tem esse
+  // problema. O navegador web nunca manda esse header, então não muda nada
+  // pro fluxo cookie httpOnly de sempre.
+  if (!token) {
+    const h = await headers();
+    const auth = h.get("authorization");
+    if (auth?.startsWith("Bearer ")) token = auth.slice(7);
+  }
+
   if (!token) return null;
 
   const row = await get<{ id: number; email: string; role: string; active: boolean; expiresAt: string }>(
