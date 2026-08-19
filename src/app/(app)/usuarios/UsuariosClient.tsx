@@ -96,6 +96,8 @@ export function UsuariosClient() {
   const [search, setSearch] = useState("");
   const [grantId, setGrantId] = useState<number | null>(null);
   const [grantDays, setGrantDays] = useState("");
+  const [inviteGrantId, setInviteGrantId] = useState<number | null>(null);
+  const [inviteGrantQty, setInviteGrantQty] = useState("1");
   const [historyUserId, setHistoryUserId] = useState<number | null>(null);
   // position: fixed (calculada a partir do botão "⋮" ao abrir), não
   // absolute — a tabela tem overflow-x-auto, e por regra do CSS isso faz o
@@ -285,16 +287,23 @@ export function UsuariosClient() {
 
   async function handleGrantInviteCredit(u: User) {
     setRowError(null);
+    const qty = Number(inviteGrantQty);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      setRowError({ id: u.id, message: "Informe uma quantidade válida." });
+      return;
+    }
     const res = await fetch(`/api/users/${u.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ grantInviteCredit: true }),
+      body: JSON.stringify({ grantInviteCredits: qty }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
       return;
     }
+    setInviteGrantId(null);
+    setInviteGrantQty("1");
     load();
   }
 
@@ -411,6 +420,35 @@ export function UsuariosClient() {
         </div>
       );
     }
+    if (inviteGrantId === u.id) {
+      return (
+        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+          <input
+            value={inviteGrantQty}
+            onChange={(e) => setInviteGrantQty(e.target.value)}
+            className="input w-16 py-1"
+            placeholder="qtd"
+            inputMode="numeric"
+            autoFocus
+          />
+          <button
+            onClick={() => handleGrantInviteCredit(u)}
+            className="text-xs font-medium text-emerald-400 hover:text-emerald-300"
+          >
+            liberar
+          </button>
+          <button
+            onClick={() => {
+              setInviteGrantId(null);
+              setInviteGrantQty("1");
+            }}
+            className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+          >
+            cancelar
+          </button>
+        </div>
+      );
+    }
     const accessStatus = subStatusByUser[u.id]?.status;
     const isOpen = menuAnchor?.id === u.id;
 
@@ -497,11 +535,12 @@ export function UsuariosClient() {
             <MenuItem
               tone="success"
               onClick={() => {
+                setInviteGrantQty("1");
+                setInviteGrantId(u.id);
                 setMenuAnchor(null);
-                handleGrantInviteCredit(u);
               }}
             >
-              +1 convite ({u.inviteCredits})
+              liberar convites ({u.inviteCredits})
             </MenuItem>
             {u.telegramLinked && (
               <MenuItem
@@ -618,6 +657,7 @@ export function UsuariosClient() {
                   {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · último acesso:{" "}
                   <LastSeenCell iso={u.lastSeenAt} now={now} /> · acesso:{" "}
                   {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
+                  {u.inviteCredits > 0 && <span className="text-emerald-400"> · {u.inviteCredits} convite{u.inviteCredits === 1 ? "" : "s"}</span>}
                 </p>
                 <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
                 {rowError && rowError.id === u.id && <p className="mt-1 text-xs text-red-400">{rowError.message}</p>}
@@ -668,6 +708,9 @@ export function UsuariosClient() {
                     </td>
                     <td className="whitespace-nowrap px-4 py-2 text-zinc-400">
                       {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
+                      {u.inviteCredits > 0 && (
+                        <span className="text-emerald-400"> · {u.inviteCredits} convite{u.inviteCredits === 1 ? "" : "s"}</span>
+                      )}
                     </td>
                     <td className="px-4 py-2">
                       {renderActions(u, "end")}

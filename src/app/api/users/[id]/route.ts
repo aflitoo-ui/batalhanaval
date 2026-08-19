@@ -38,7 +38,7 @@ export const PATCH = withApiErrors(
       fields.push(`password_hash = $${i++}`);
       params.push(hashPassword(parsed.data.password));
     }
-    if (fields.length === 0 && !parsed.data.telegramReset && !parsed.data.grantInviteCredit) {
+    if (fields.length === 0 && !parsed.data.telegramReset && !parsed.data.grantInviteCredits) {
       return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
     }
 
@@ -64,11 +64,13 @@ export const PATCH = withApiErrors(
       }
     }
 
-    // Cada clique soma +1 crédito — o admin pode liberar quantos convites
-    // quiser, sem limite (diferente do crédito automático, que só acontece
-    // uma vez por conta em src/lib/invites.ts).
-    if (parsed.data.grantInviteCredit) {
-      const result = await run(`UPDATE users SET invite_credits = invite_credits + 1 WHERE id = $1`, [id]);
+    // O admin escolhe quantos créditos soma de uma vez (diferente do crédito
+    // automático, que só acontece uma vez por conta em src/lib/invites.ts).
+    if (parsed.data.grantInviteCredits) {
+      const result = await run(`UPDATE users SET invite_credits = invite_credits + $1 WHERE id = $2`, [
+        parsed.data.grantInviteCredits,
+        id,
+      ]);
       if (result.rowCount === 0) {
         return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
       }
@@ -113,11 +115,12 @@ export const PATCH = withApiErrors(
         targetUserId,
       });
     }
-    if (parsed.data.grantInviteCredit) {
+    if (parsed.data.grantInviteCredits) {
       await logAdminAction({
         adminId: user.id,
         action: "grant_invite_credit",
         targetUserId,
+        details: `+${parsed.data.grantInviteCredits}`,
       });
     }
 
