@@ -553,15 +553,15 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-        <div className="mb-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+      <div className="flex max-h-full w-full max-w-md flex-col rounded-xl border border-zinc-800 bg-zinc-900">
+        <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 p-5 pb-4">
           <h2 className="text-base font-bold text-zinc-100">{title}</h2>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300">
             ✕
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto p-5 pt-4">{children}</div>
       </div>
     </div>
   );
