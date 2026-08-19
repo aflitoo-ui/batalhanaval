@@ -10,10 +10,13 @@ export const GET = withApiErrors("users.GET", async () => {
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   if (user.role !== "admin") return NextResponse.json({ error: "Sem permissão." }, { status: 403 });
 
+  // Admin sempre primeiro, fixo; os demais por último acesso — quem logou
+  // mais recente aparece no topo, quem nunca logou (last_seen_at nulo) fica
+  // no final.
   const rows = await all(
     `SELECT id, email, role, active, created_at as "createdAt", last_seen_at as "lastSeenAt",
       telegram_chat_id IS NOT NULL as "telegramLinked", invite_credits as "inviteCredits"
-     FROM users ORDER BY created_at ASC`
+     FROM users ORDER BY (role = 'admin') DESC, last_seen_at DESC NULLS LAST`
   );
   return NextResponse.json({ users: rows });
 });

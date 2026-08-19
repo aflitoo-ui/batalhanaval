@@ -2,17 +2,14 @@
 
 import { useEffect, useState } from "react";
 
-type LinkStatus =
-  | { linked: true }
-  | { linked: false; dismissed: true }
-  | { linked: false; dismissed: false; deepLink: string | null };
+type LinkStatus = { linked: true } | { linked: false; deepLink: string | null };
 
-// Gating vem do servidor (GET /api/account/telegram-link), não de
-// sessionStorage — diferente do aviso de assinatura em AppShell, que some
-// sozinho depois de alguns segundos e só reaparece no próximo login. Esse
-// popup fica visível até o usuário vincular ou dispensar de vez — mas
-// sempre dá pra fechar na hora (botão ✕, Esc, clique fora) sem que isso
-// conte como "não tenho Telegram" (isso só a ação explícita faz).
+// De propósito, não existe dispensa permanente — nem "não tenho Telegram"
+// impede o popup de voltar no próximo login. É uma decisão consciente: dá
+// pra fechar (✕, Esc, clique fora ou "não tenho Telegram") e seguir usando
+// o sistema normalmente na hora, mas como vincular resolve tanto avisos
+// quanto redefinição de senha, vale insistir a cada login em vez de deixar
+// a pessoa escapar disso de vez.
 export default function TelegramLinkPopup() {
   const [status, setStatus] = useState<LinkStatus | null>(null);
   const [closedThisSession, setClosedThisSession] = useState(false);
@@ -66,16 +63,7 @@ export default function TelegramLinkPopup() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  async function handleDismiss() {
-    setClosedThisSession(true);
-    await fetch("/api/account/telegram-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "dismiss" }),
-    }).catch(() => {});
-  }
-
-  if (!status || status.linked || status.dismissed || closedThisSession) return null;
+  if (!status || status.linked || closedThisSession) return null;
   if (!status.deepLink) return null; // TELEGRAM_BOT_USERNAME não configurado — nada pra mostrar
 
   return (
@@ -95,8 +83,7 @@ export default function TelegramLinkPopup() {
           </button>
         </div>
         <p className="mt-1 text-sm text-zinc-400">
-          Vincule seu Telegram: avisos de vencimento e redefinição de senha chegam direto por lá — sem
-          compartilhar telefone.
+          Vincule seu Telegram: avisos de vencimento e redefinição de senha chegam direto por lá.
         </p>
         <p className="mt-2 text-sm font-medium text-emerald-400">🎁 Ganhe +5 dias de acesso ao vincular.</p>
         <a
@@ -110,7 +97,7 @@ export default function TelegramLinkPopup() {
         </a>
         {waitingLink && <p className="mt-2 text-center text-xs text-zinc-500">Aguardando confirmação...</p>}
         <button
-          onClick={handleDismiss}
+          onClick={() => setClosedThisSession(true)}
           className="mt-3 w-full text-center text-sm text-zinc-500 hover:text-zinc-300"
         >
           Não tenho Telegram
