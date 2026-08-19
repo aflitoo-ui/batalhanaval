@@ -38,7 +38,7 @@ export const PATCH = withApiErrors(
       fields.push(`password_hash = $${i++}`);
       params.push(hashPassword(parsed.data.password));
     }
-    if (fields.length === 0 && !parsed.data.telegramReset) {
+    if (fields.length === 0 && !parsed.data.telegramReset && !parsed.data.grantInviteCredit) {
       return NextResponse.json({ error: "Nada para atualizar." }, { status: 400 });
     }
 
@@ -59,6 +59,16 @@ export const PATCH = withApiErrors(
         `UPDATE users SET telegram_chat_id = NULL, telegram_link_code = NULL, telegram_popup_dismissed = false WHERE id = $1`,
         [id]
       );
+      if (result.rowCount === 0) {
+        return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+      }
+    }
+
+    // Cada clique soma +1 crédito — o admin pode liberar quantos convites
+    // quiser, sem limite (diferente do crédito automático, que só acontece
+    // uma vez por conta em src/lib/invites.ts).
+    if (parsed.data.grantInviteCredit) {
+      const result = await run(`UPDATE users SET invite_credits = invite_credits + 1 WHERE id = $1`, [id]);
       if (result.rowCount === 0) {
         return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
       }
@@ -100,6 +110,13 @@ export const PATCH = withApiErrors(
       await logAdminAction({
         adminId: user.id,
         action: "reset_telegram",
+        targetUserId,
+      });
+    }
+    if (parsed.data.grantInviteCredit) {
+      await logAdminAction({
+        adminId: user.id,
+        action: "grant_invite_credit",
         targetUserId,
       });
     }

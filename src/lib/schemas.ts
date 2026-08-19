@@ -39,9 +39,16 @@ export const createUserSchema = z.object({
   role: z.enum(["admin", "user"]).optional(),
 });
 
+export const signupSchema = z.object({
+  code: z.string().trim().min(1, "Convite inválido."),
+  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres"),
+});
+
 export const updateUserSchema = z.object({
   active: z.boolean().optional(),
   role: z.enum(["admin", "user"]).optional(),
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").optional(),
   telegramReset: z.boolean().optional(),
+  grantInviteCredit: z.boolean().optional(),
 });

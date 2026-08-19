@@ -3,6 +3,7 @@ import { all, get, run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { logAdminAction } from "@/lib/adminLog";
+import { grantInviteCreditOnce } from "@/lib/invites";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -116,6 +117,7 @@ export const PATCH = withApiErrors(
         details: "liberado sem prazo",
       });
     }
+    await grantInviteCreditOnce({ get }, Number(userId));
     return NextResponse.json({ ok: true, status: "granted" });
   }
 );

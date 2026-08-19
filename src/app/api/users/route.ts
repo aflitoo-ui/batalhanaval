@@ -12,7 +12,7 @@ export const GET = withApiErrors("users.GET", async () => {
 
   const rows = await all(
     `SELECT id, email, role, active, created_at as "createdAt", last_seen_at as "lastSeenAt",
-      telegram_chat_id IS NOT NULL as "telegramLinked"
+      telegram_chat_id IS NOT NULL as "telegramLinked", invite_credits as "inviteCredits"
      FROM users ORDER BY created_at ASC`
   );
   return NextResponse.json({ users: rows });

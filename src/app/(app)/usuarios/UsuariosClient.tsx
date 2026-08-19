@@ -11,6 +11,7 @@ type User = {
   createdAt: string;
   lastSeenAt: string | null;
   telegramLinked: boolean;
+  inviteCredits: number;
 };
 
 function formatDate(iso: string) {
@@ -275,6 +276,21 @@ export function UsuariosClient() {
     load();
   }
 
+  async function handleGrantInviteCredit(u: User) {
+    setRowError(null);
+    const res = await fetch(`/api/users/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ grantInviteCredit: true }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setRowError({ id: u.id, message: data?.error || "Erro ao atualizar." });
+      return;
+    }
+    load();
+  }
+
   function renderActions(u: User, align: "start" | "end") {
     const justify = align === "end" ? "justify-end" : "justify-start";
     if (u.role === "admin") {
@@ -470,6 +486,15 @@ export function UsuariosClient() {
               }}
             >
               histórico
+            </MenuItem>
+            <MenuItem
+              tone="success"
+              onClick={() => {
+                setMenuAnchor(null);
+                handleGrantInviteCredit(u);
+              }}
+            >
+              +1 convite ({u.inviteCredits})
             </MenuItem>
             {u.telegramLinked && (
               <MenuItem

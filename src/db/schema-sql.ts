@@ -216,4 +216,22 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_popup_dismissed BOOLEAN NOT 
 -- ninguém conseguir vincular, trocar, vincular de novo repetidas vezes só
 -- pra somar +5 dias toda hora.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_bonus_granted_at TIMESTAMPTZ;
+
+-- Convites: cliente pagante (status 'active') ou liberado pelo admin
+-- (status 'granted') ganha 1 crédito de convite pra trazer um amigo, uma
+-- única vez — invite_credit_earned trava isso pra não creditar de novo a
+-- cada pagamento recorrente. invite_credits é o saldo (o admin pode somar
+-- mais manualmente). Cada convite gerado consome 1 crédito e vira um código
+-- de uso único; used_by fica null até alguém se cadastrar com ele.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_credits INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_credit_earned BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS invites (
+  id SERIAL PRIMARY KEY,
+  code TEXT UNIQUE NOT NULL,
+  created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  used_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_invites_created_by ON invites(created_by);
 `;

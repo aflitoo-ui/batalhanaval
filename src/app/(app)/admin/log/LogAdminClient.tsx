@@ -21,6 +21,7 @@ const ACTION_LABEL: Record<string, string> = {
   reset_password: "Redefiniu senha",
   reset_telegram: "Desvinculou Telegram",
   delete_user: "Excluiu usuário",
+  grant_invite_credit: "Liberou +1 convite",
 };
 
 function actionLabel(action: string) {

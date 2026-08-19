@@ -28,6 +28,8 @@ type HistoryItem = { id: number; amount: number; status: string; paidAt: string 
 
 type TelegramStatus = { linked: true } | { linked: false; dismissed: boolean; deepLink: string | null };
 
+type InviteStatus = { credits: number; invites: { code: string; createdAt: string }[] };
+
 function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
@@ -63,6 +65,10 @@ export default function AssinaturaPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [waitingPayment, setWaitingPayment] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
+  const [inviteStatus, setInviteStatus] = useState<InviteStatus | null>(null);
+  const [generatingInvite, setGeneratingInvite] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -81,10 +87,39 @@ export default function AssinaturaPage() {
     if (data) setTelegramStatus(data);
   }
 
+  async function loadInviteStatus() {
+    const res = await fetch("/api/account/invite");
+    if (!res.ok) return;
+    const data = await res.json().catch(() => null);
+    if (data) setInviteStatus(data);
+  }
+
   useEffect(() => {
     void load();
     void loadTelegramStatus();
+    void loadInviteStatus();
   }, []);
+
+  async function handleGenerateInvite() {
+    setInviteError(null);
+    setGeneratingInvite(true);
+    const res = await fetch("/api/account/invite", { method: "POST" });
+    const data = await res.json().catch(() => null);
+    setGeneratingInvite(false);
+    if (!res.ok) {
+      setInviteError(data?.error || "Erro ao gerar convite.");
+      return;
+    }
+    void loadInviteStatus();
+  }
+
+  function handleCopyInvite(code: string) {
+    const url = `${window.location.origin}/cadastro?c=${code}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  }
 
   // Depois de abrir a fatura numa aba nova, fica de olho sozinho — o
   // pagamento acontece lá fora (Asaas) e só sabemos que confirmou quando o
@@ -364,6 +399,41 @@ export default function AssinaturaPage() {
               )}
             </>
           )}
+        </div>
+      )}
+
+      {inviteStatus && (inviteStatus.credits > 0 || inviteStatus.invites.length > 0) && (
+        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+          <h2 className="mb-1 text-sm font-semibold text-zinc-200">Convide um amigo</h2>
+          <p className="text-sm text-zinc-400">
+            Você tem {inviteStatus.credits} convite{inviteStatus.credits === 1 ? "" : "s"} disponíve
+            {inviteStatus.credits === 1 ? "l" : "is"}.
+          </p>
+
+          {inviteStatus.invites.map((inv) => (
+            <div key={inv.code} className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-2">
+              <code className="flex-1 truncate text-xs text-zinc-400">
+                {typeof window !== "undefined" ? window.location.origin : ""}/cadastro?c={inv.code}
+              </code>
+              <button
+                onClick={() => handleCopyInvite(inv.code)}
+                className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 transition hover:bg-zinc-700"
+              >
+                {copiedCode === inv.code ? "Copiado!" : "Copiar"}
+              </button>
+            </div>
+          ))}
+
+          {inviteStatus.credits > 0 && (
+            <button
+              onClick={handleGenerateInvite}
+              disabled={generatingInvite}
+              className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+            >
+              {generatingInvite ? "Gerando..." : "Gerar link de convite"}
+            </button>
+          )}
+          {inviteError && <p className="mt-2 text-xs text-red-400">{inviteError}</p>}
         </div>
       )}
 
