@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 // Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
 // caracteres que lembrem um, pra ninguém acabar escolhendo um login no
@@ -13,7 +14,7 @@ function sanitizeLogin(value: string) {
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const code = searchParams.get("c") || "";
+  const [code, setCode] = useState(searchParams.get("c") || "");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -45,31 +46,30 @@ export function SignupForm() {
     }
   }
 
-  if (!code) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
-        <div className="w-full max-w-sm text-center">
-          <h1 className="mb-4 text-2xl font-bold tracking-tight text-[#946ce0]">STRIX</h1>
-          <p className="text-sm text-zinc-400">
-            Esse link de cadastro está incompleto. Peça pra quem te convidou mandar o link de novo.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
         <h1 className="mb-2 text-center text-2xl font-bold tracking-tight text-[#946ce0]">STRIX</h1>
-        <p className="mb-8 text-center text-sm text-zinc-500">Você foi convidado — crie sua conta.</p>
+        <p className="mb-8 text-center text-sm text-zinc-500">Criar conta com convite</p>
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">Código de convite</label>
+            <input
+              type="text"
+              required
+              autoFocus={!code}
+              autoComplete="off"
+              value={code}
+              onChange={(e) => setCode(e.target.value.trim())}
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#946ce0]"
+            />
+          </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">Login</label>
             <input
               type="text"
               required
-              autoFocus
+              autoFocus={!!code}
               autoComplete="off"
               value={email}
               onChange={(e) => setEmail(sanitizeLogin(e.target.value))}
@@ -96,6 +96,12 @@ export function SignupForm() {
             {loading ? "Criando conta..." : "Criar conta"}
           </button>
         </form>
+        <Link
+          href="/login"
+          className="mt-4 block text-center text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300"
+        >
+          Já tenho conta — entrar
+        </Link>
       </div>
     </div>
   );
