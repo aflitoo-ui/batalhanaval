@@ -4,6 +4,7 @@ import { hashPassword, createSessionCookie } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { signupSchema } from "@/lib/schemas";
 import { isRateLimited, recordRateLimitFailure } from "@/lib/rate-limit";
+import { logAdminAction } from "@/lib/adminLog";
 
 const RATE_LIMIT_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };
 
@@ -25,9 +26,10 @@ export const POST = withApiErrors("auth.signup.POST", async (req: NextRequest) =
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Dados inválidos." }, { status: 400 });
   }
 
-  const invite = await get<{ id: number }>(`SELECT id FROM invites WHERE code = $1 AND used_by IS NULL`, [
-    parsed.data.code,
-  ]);
+  const invite = await get<{ id: number; createdBy: number }>(
+    `SELECT id, created_by as "createdBy" FROM invites WHERE code = $1 AND used_by IS NULL`,
+    [parsed.data.code]
+  );
   if (!invite) {
     recordRateLimitFailure(rateLimitKey, RATE_LIMIT_OPTS);
     return NextResponse.json({ error: "Convite inválido ou já utilizado." }, { status: 400 });
@@ -36,7 +38,7 @@ export const POST = withApiErrors("auth.signup.POST", async (req: NextRequest) =
   const existing = await get(`SELECT id FROM users WHERE email = $1`, [parsed.data.email]);
   if (existing) {
     recordRateLimitFailure(rateLimitKey, RATE_LIMIT_OPTS);
-    return NextResponse.json({ error: "Já existe uma conta com esse e-mail." }, { status: 409 });
+    return NextResponse.json({ error: "Já existe uma conta com esse login." }, { status: 409 });
   }
 
   const passwordHash = hashPassword(parsed.data.password);
@@ -65,6 +67,10 @@ export const POST = withApiErrors("auth.signup.POST", async (req: NextRequest) =
   if (!userId) {
     return NextResponse.json({ error: "Erro ao criar conta." }, { status: 500 });
   }
+
+  // Aponta o padrinho (quem gerou o convite) pro afilhado (a conta nova) —
+  // dá pra ver essa linha inteira no Log de ações do admin.
+  await logAdminAction({ adminId: invite.createdBy, action: "signup_via_invite", targetUserId: userId });
 
   await createSessionCookie(userId);
   return NextResponse.json({ ok: true }, { status: 201 });

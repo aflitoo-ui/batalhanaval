@@ -82,7 +82,7 @@ export function AssinaturasAdminClient() {
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por e-mail..."
+        placeholder="Buscar por login..."
         className="input max-w-xs"
       />
 

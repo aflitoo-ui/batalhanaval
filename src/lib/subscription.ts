@@ -45,6 +45,19 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
     return { allowed: false, status: "expired" };
   }
 
+  if (sub.status === "pending") {
+    // Fatura gerada mas ainda não paga — gerar a fatura antecipado (a pessoa
+    // pode clicar em "Assinar agora" mesmo com dias de trial/liberação
+    // sobrando) não pode cortar o acesso que ela já tinha até esse prazo. Só
+    // fica bloqueado se realmente não sobrar mais nada.
+    const trialEnd = sub.trialEndsAt ? new Date(sub.trialEndsAt) : null;
+    if (trialEnd && trialEnd.getTime() > Date.now()) {
+      const daysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+      return { allowed: true, status: "pending", daysLeft: Math.max(daysLeft, 0) };
+    }
+    return { allowed: false, status: "pending" };
+  }
+
   if (sub.status === "active" || sub.status === "canceled") {
     // "canceled" ainda libera acesso até o fim do período já pago — só
     // deixa de renovar depois disso, não corta o que já foi pago.

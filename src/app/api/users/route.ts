@@ -31,7 +31,7 @@ export const POST = withApiErrors("users.POST", async (req: NextRequest) => {
 
   const existing = await get(`SELECT id FROM users WHERE email = $1`, [parsed.data.email]);
   if (existing) {
-    return NextResponse.json({ error: "Já existe um usuário com esse e-mail." }, { status: 409 });
+    return NextResponse.json({ error: "Já existe um usuário com esse login." }, { status: 409 });
   }
 
   const passwordHash = hashPassword(parsed.data.password);

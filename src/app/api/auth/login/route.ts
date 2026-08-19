@@ -21,7 +21,7 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
   const password = typeof body?.password === "string" ? body.password : "";
 
   if (!email || !password) {
-    return NextResponse.json({ error: "Informe e-mail e senha." }, { status: 400 });
+    return NextResponse.json({ error: "Informe login e senha." }, { status: 400 });
   }
 
   const user = await get<{ id: number; email: string; passwordHash: string; active: boolean }>(
@@ -31,7 +31,7 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
 
   if (!user || !user.active || !verifyPassword(password, user.passwordHash)) {
     recordRateLimitFailure(rateLimitKey, RATE_LIMIT_OPTS);
-    return NextResponse.json({ error: "E-mail ou senha incorretos." }, { status: 401 });
+    return NextResponse.json({ error: "Login ou senha incorretos." }, { status: 401 });
   }
 
   clearRateLimit(rateLimitKey);

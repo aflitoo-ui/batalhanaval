@@ -39,7 +39,7 @@ export const GET = withApiErrors("subscriptions.me.GET", async () => {
   const fullDaysLeft = (() => {
     if (!sub) return null;
     const iso =
-      sub.status === "trialing" || sub.status === "granted"
+      sub.status === "trialing" || sub.status === "granted" || sub.status === "pending"
         ? sub.trialEndsAt
         : sub.status === "active" || sub.status === "canceled"
           ? sub.currentPeriodEnd

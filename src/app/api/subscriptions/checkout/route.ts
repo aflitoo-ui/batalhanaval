@@ -18,10 +18,12 @@ export const POST = withApiErrors("subscriptions.checkout.POST", async (req: Nex
     planCode: string;
     price: string;
     cpfCnpj: string | null;
+    billingEmail: string | null;
+    billingEmailSkipped: boolean;
   }>(
     `SELECT s.id, s.provider_customer_id as "providerCustomerId",
       s.provider_subscription_id as "providerSubscriptionId", p.code as "planCode", p.price,
-      u.cpf_cnpj as "cpfCnpj"
+      u.cpf_cnpj as "cpfCnpj", u.billing_email as "billingEmail", u.billing_email_skipped as "billingEmailSkipped"
      FROM subscriptions s JOIN plans p ON p.id = s.plan_id JOIN users u ON u.id = s.user_id
      WHERE s.user_id = $1 ORDER BY s.id DESC LIMIT 1`,
     [user.id]
@@ -68,11 +70,33 @@ export const POST = withApiErrors("subscriptions.checkout.POST", async (req: Nex
   }
   if (!cpfCnpj) return NextResponse.json({ error: "Erro interno." }, { status: 500 });
 
+  // E-mail de cobrança é opcional e separado do login — só pergunta uma vez
+  // (billingEmailSkipped trava a pergunta depois de "prefiro não informar").
+  // Sem e-mail nenhum, usa um sintético só pra Asaas aceitar o cadastro do
+  // cliente; a pessoa nesse caso não recebe fatura por e-mail, só acompanha
+  // pelo próprio STRIX.
+  let billingEmail = sub.billingEmail;
+  if (!billingEmail && !sub.billingEmailSkipped) {
+    if (body?.skipBillingEmail === true) {
+      await run(`UPDATE users SET billing_email_skipped = true WHERE id = $1`, [user.id]);
+    } else {
+      const raw = typeof body?.billingEmail === "string" ? body.billingEmail.trim().toLowerCase() : "";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
+        return NextResponse.json(
+          { error: "Informe um e-mail válido pra receber a fatura, ou escolha não informar.", code: "billing_email_required" },
+          { status: 400 }
+        );
+      }
+      billingEmail = raw;
+      await run(`UPDATE users SET billing_email = $1 WHERE id = $2`, [billingEmail, user.id]);
+    }
+  }
+
   async function createFreshCustomer() {
     const customer = await provider.createCustomer({
       id: user!.id,
       name: user!.email,
-      email: user!.email,
+      email: billingEmail || `usuario${user!.id}@strix.blog`,
       cpfCnpj: cpfCnpj!,
     });
     return customer.providerCustomerId;

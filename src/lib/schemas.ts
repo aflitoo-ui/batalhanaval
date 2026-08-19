@@ -33,15 +33,30 @@ export const paymentSchema = z.object({
   notes: z.string().trim().max(500).optional().nullable(),
 });
 
+// Chamado "email" no banco/código por herança (era e-mail no começo do
+// projeto), mas não é mais validado nem tratado como e-mail — é só um login
+// de texto livre, já que o sistema nunca precisou mandar e-mail de verdade
+// pra ninguém. Os campos de criação no navegador já filtram @ e .com
+// enquanto digita (ver sanitizeLogin em UsuariosClient.tsx/SignupForm.tsx);
+// essa validação aqui é a segunda camada, caso alguém chame a API direto.
+const loginField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Login deve ter pelo menos 3 caracteres")
+  .max(100)
+  .refine((v) => !v.includes("@"), "Login não pode conter @")
+  .refine((v) => !v.includes(".com"), "Login não pode conter .com");
+
 export const createUserSchema = z.object({
-  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  email: loginField,
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres"),
   role: z.enum(["admin", "user"]).optional(),
 });
 
 export const signupSchema = z.object({
   code: z.string().trim().min(1, "Convite inválido."),
-  email: z.string().trim().toLowerCase().email("E-mail inválido"),
+  email: loginField,
   password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres"),
 });
 

@@ -62,6 +62,8 @@ export default function AssinaturaPage() {
   const [error, setError] = useState<string | null>(null);
   const [needsCpfCnpj, setNeedsCpfCnpj] = useState(false);
   const [cpfCnpj, setCpfCnpj] = useState("");
+  const [needsBillingEmail, setNeedsBillingEmail] = useState(false);
+  const [billingEmailInput, setBillingEmailInput] = useState("");
   const [info, setInfo] = useState<string | null>(null);
   const [waitingPayment, setWaitingPayment] = useState(false);
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
@@ -156,18 +158,30 @@ export default function AssinaturaPage() {
     };
   }, [waitingPayment]);
 
-  async function handleSubscribe(force = false) {
+  async function handleSubscribe(opts: { force?: boolean; skipBillingEmail?: boolean } = {}) {
     setError(null);
     setInfo(null);
     if (needsCpfCnpj && cpfCnpj.replace(/\D/g, "").length < 11) {
       setError("Informe um CPF ou CNPJ válido.");
       return;
     }
+    if (needsBillingEmail && !opts.skipBillingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmailInput.trim())) {
+      setError("Informe um e-mail válido, ou escolha não informar.");
+      return;
+    }
     setStarting(true);
     const res = await fetch("/api/subscriptions/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...(needsCpfCnpj ? { cpfCnpj } : {}), ...(force ? { force: true } : {}) }),
+      body: JSON.stringify({
+        ...(needsCpfCnpj ? { cpfCnpj } : {}),
+        ...(needsBillingEmail
+          ? opts.skipBillingEmail
+            ? { skipBillingEmail: true }
+            : { billingEmail: billingEmailInput.trim() }
+          : {}),
+        ...(opts.force ? { force: true } : {}),
+      }),
     });
     const data = await res.json().catch(() => null);
     setStarting(false);
@@ -175,6 +189,11 @@ export default function AssinaturaPage() {
       if (data?.code === "cpf_cnpj_required") {
         setNeedsCpfCnpj(true);
         setError(needsCpfCnpj ? "CPF/CNPJ inválido — confira os números." : null);
+        return;
+      }
+      if (data?.code === "billing_email_required") {
+        setNeedsBillingEmail(true);
+        setError(null);
         return;
       }
       setError(data?.error || "Erro ao iniciar assinatura.");
@@ -281,6 +300,11 @@ export default function AssinaturaPage() {
                   if (subscription.status === "granted") {
                     return dias ? `Acesso liberado — termina em ${dias}.` : "Acesso liberado — termina hoje.";
                   }
+                  if (subscription.status === "pending") {
+                    return dias
+                      ? `Fatura gerada — seu acesso continua liberado por ${dias}. Pague antes disso pra não perder o acesso.`
+                      : "Fatura gerada — seu acesso termina hoje se não pagar.";
+                  }
                   // active
                   return dias ? `Vence em ${dias}.` : "Vence hoje.";
                 })()}
@@ -313,6 +337,33 @@ export default function AssinaturaPage() {
               </div>
             )}
 
+            {needsBillingEmail && (
+              <div className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+                <p className="text-xs text-zinc-400">
+                  Esse e-mail é só pra Asaas te mandar a fatura de pagamento (boleto/Pix/cartão). Se preferir não
+                  informar, você não recebe a fatura por e-mail — o pagamento continua funcionando normalmente,
+                  você só acompanha por aqui.
+                </p>
+                <label className="mb-1 mt-2 block text-xs font-medium text-zinc-400">E-mail pra fatura (opcional)</label>
+                <input
+                  value={billingEmailInput}
+                  onChange={(e) => setBillingEmailInput(e.target.value)}
+                  className="input max-w-xs"
+                  placeholder="seuemail@exemplo.com"
+                  inputMode="email"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSubscribe({ skipBillingEmail: true })}
+                  disabled={starting}
+                  className="mt-2 block text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-300 disabled:opacity-60"
+                >
+                  Prefiro não informar
+                </button>
+              </div>
+            )}
+
             {info && <p className="mt-3 text-sm text-emerald-400">{info}</p>}
             {waitingPayment && <p className="mt-1 text-xs text-zinc-500">Checando pagamento...</p>}
             {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
@@ -338,7 +389,7 @@ export default function AssinaturaPage() {
                   </button>
                   {subscription.status === "pending" && (
                     <button
-                      onClick={() => handleSubscribe(true)}
+                      onClick={() => handleSubscribe({ force: true })}
                       disabled={starting}
                       className="mt-3 block py-1 text-xs text-zinc-500 underline underline-offset-2 hover:text-zinc-300 disabled:opacity-60"
                     >

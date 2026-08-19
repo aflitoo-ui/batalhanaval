@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+// Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
+// caracteres que lembrem um, pra ninguém acabar escolhendo um login no
+// formato antigo por hábito.
+function sanitizeLogin(value: string) {
+  return value.replace(/@/g, "").replace(/\.com/gi, "");
+}
+
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -58,15 +65,14 @@ export function SignupForm() {
         <p className="mb-8 text-center text-sm text-zinc-500">Você foi convidado — crie sua conta.</p>
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">E-mail</label>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">Login</label>
             <input
               type="text"
-              inputMode="email"
               required
               autoFocus
               autoComplete="off"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(sanitizeLogin(e.target.value))}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#946ce0]"
             />
           </div>

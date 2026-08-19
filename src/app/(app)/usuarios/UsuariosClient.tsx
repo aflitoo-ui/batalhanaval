@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { SubscriptionHistoryModal } from "@/components/SubscriptionHistoryModal";
 
+// Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
+// caracteres que lembrem um, pra ninguém acabar escolhendo um login no
+// formato antigo por hábito.
+function sanitizeLogin(value: string) {
+  return value.replace(/@/g, "").replace(/\.com/gi, "");
+}
+
 type User = {
   id: number;
   email: string;
@@ -150,8 +157,8 @@ export function UsuariosClient() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!email.trim() || password.length < 8) {
-      setError("Informe um e-mail válido e senha com pelo menos 8 caracteres.");
+    if (email.trim().length < 3 || password.length < 8) {
+      setError("Informe um login com pelo menos 3 caracteres e senha com pelo menos 8.");
       return;
     }
     setSaving(true);
@@ -551,13 +558,13 @@ export function UsuariosClient() {
         className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4"
       >
         <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-400">E-mail</label>
+          <label className="mb-1 block text-xs font-medium text-zinc-400">Login</label>
           <input
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(sanitizeLogin(e.target.value))}
             className="input w-full sm:w-56"
-            placeholder="cliente@exemplo.com"
-            type="email"
+            placeholder="usuario123"
+            type="text"
           />
         </div>
         <div>
@@ -583,7 +590,7 @@ export function UsuariosClient() {
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Buscar por e-mail..."
+        placeholder="Buscar por login..."
         className="input max-w-xs"
       />
 
@@ -632,7 +639,7 @@ export function UsuariosClient() {
               </colgroup>
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
-                  <th className="px-4 py-2">E-mail</th>
+                  <th className="px-4 py-2">Login</th>
                   <th className="px-4 py-2">Papel</th>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Desde</th>

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { all, get, withTransaction } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
+import { logAdminAction } from "@/lib/adminLog";
 
 export const GET = withApiErrors("account.invite.GET", async () => {
   const user = await getSessionUser();
@@ -39,5 +40,6 @@ export const POST = withApiErrors("account.invite.POST", async () => {
   if (!code) {
     return NextResponse.json({ error: "Você não tem créditos de convite disponíveis." }, { status: 400 });
   }
+  await logAdminAction({ adminId: user.id, action: "generate_invite" });
   return NextResponse.json({ code });
 });

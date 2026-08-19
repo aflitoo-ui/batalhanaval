@@ -3,24 +3,19 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const EMAIL_SUFFIX = "@cliente.com";
+// Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
+// caracteres que lembrem um.
+function sanitizeLogin(value: string) {
+  return value.replace(/@/g, "").replace(/\.com/gi, "");
+}
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState(EMAIL_SUFFIX);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
-
-  // A maioria dos clientes loga como "usuario@cliente.com" — deixa o
-  // domínio pronto e o cursor antes do "@" pra só digitar o usuário. Quem
-  // usa outro domínio (ex: o próprio dono) apaga com o botão "×" ao lado.
-  function focusEmailStart(el: HTMLInputElement) {
-    if (el.value === EMAIL_SUFFIX) {
-      requestAnimationFrame(() => el.setSelectionRange(0, 0));
-    }
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,24 +49,23 @@ export function LoginForm() {
         <h1 className="mb-8 text-center text-2xl font-bold tracking-tight text-[#946ce0]">STRIX</h1>
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
           <div>
-            <label className="mb-1 block text-sm font-medium text-zinc-300">E-mail</label>
+            <label className="mb-1 block text-sm font-medium text-zinc-300">Login</label>
             <div className="relative">
               <input
                 ref={emailRef}
                 type="text"
-                inputMode="email"
                 required
                 autoFocus
                 autoComplete="off"
                 value={email}
-                onFocus={(e) => focusEmailStart(e.currentTarget)}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => setEmail(sanitizeLogin(e.target.value))}
                 className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#946ce0]"
               />
               {email && (
                 <button
                   type="button"
-                  aria-label="Limpar e-mail"
+                  tabIndex={-1}
+                  aria-label="Limpar login"
                   onClick={() => {
                     setEmail("");
                     emailRef.current?.focus();

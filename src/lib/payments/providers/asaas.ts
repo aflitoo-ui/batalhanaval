@@ -43,6 +43,9 @@ const EVENT_MAP: Record<string, NormalizedEvent["type"] | undefined> = {
 };
 
 export const asaasProvider: PaymentProvider = {
+  // O "email" aqui já vem resolvido de quem chama (e-mail de cobrança real
+  // se a pessoa informou, ou um sintético se preferiu não informar — ver
+  // src/app/api/subscriptions/checkout/route.ts).
   async createCustomer(user) {
     const data = await asaasFetch("/customers", {
       method: "POST",

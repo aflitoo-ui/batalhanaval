@@ -234,4 +234,13 @@ CREATE TABLE IF NOT EXISTS invites (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_invites_created_by ON invites(created_by);
+
+-- E-mail de cobrança: opcional, separado do login (que não precisa mais ter
+-- formato de e-mail — ver schemas.ts). Se a pessoa informar, a Asaas manda
+-- a fatura de pagamento pra ele; se preferir não informar (billing_email_
+-- skipped), o checkout usa um e-mail sintético só pra Asaas aceitar o
+-- cadastro (ver asaasEmail em src/app/api/subscriptions/checkout/route.ts),
+-- e a pessoa não recebe nada por e-mail, só acompanha pelo próprio STRIX.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_email TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_email_skipped BOOLEAN NOT NULL DEFAULT false;
 `;
