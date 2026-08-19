@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Product = {
   id: number;
@@ -68,6 +69,11 @@ function daysSince(iso: string) {
   return Math.round((today.getTime() - saleDate.getTime()) / 86400000);
 }
 
+function inMonth(s: Sale, year: number, month: number) {
+  const [y, m] = s.saleDate.split("T")[0].split("-").map(Number);
+  return y === year && m === month + 1;
+}
+
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -110,6 +116,16 @@ function AdjustmentSignToggle({ negative, onToggle }: { negative: boolean; onTog
 }
 
 export default function VendasPage() {
+  return (
+    <Suspense>
+      <VendasPageInner />
+    </Suspense>
+  );
+}
+
+function VendasPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -156,6 +172,18 @@ export default function VendasPage() {
     void load();
   }, []);
 
+  // Chegando aqui a partir do drill-down de um cliente em Relatórios — a
+  // busca já vem preenchida com o nome. Limpa o parâmetro da URL depois de
+  // aplicar pra não reaplicar sempre que a página for recarregada.
+  useEffect(() => {
+    const cliente = searchParams.get("cliente");
+    if (cliente) {
+      setSearch(cliente);
+      router.replace("/");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const isCurrentMonth = viewMonth.year === currentYearMonth().year && viewMonth.month === currentYearMonth().month;
 
   function goToMonth(delta: number) {
@@ -166,32 +194,28 @@ export default function VendasPage() {
     });
   }
 
+  const q = search.trim().toLowerCase();
+  // Buscar por um cliente é implicitamente "todas as datas" — sem isso o
+  // resultado ficaria vazio sem motivo aparente sempre que a venda daquele
+  // cliente não estivesse no mês em exibição no momento (inclusive vindo do
+  // drill-down de Relatórios).
+  const monthFilterActive = !onlyOwed && !q;
+
   const filteredSales = useMemo(() => {
-    const q = search.trim().toLowerCase();
     return sales
-      // "Só quem deve" é sobre "quem me deve agora", não tem relação com mês
-      // — por isso ignora o filtro de mês quando ativado.
-      .filter((s) => {
-        if (onlyOwed) return true;
-        const [y, m] = s.saleDate.split("T")[0].split("-").map(Number);
-        return y === viewMonth.year && m === viewMonth.month + 1;
-      })
+      .filter((s) => (monthFilterActive ? inMonth(s, viewMonth.year, viewMonth.month) : true))
       .filter((s) => !q || (s.customerName || "").toLowerCase().includes(q))
       .filter((s) => !onlyOwed || s.owed > 0)
       .filter((s) => !onlyOwed || debtAgeFilter === 0 || daysSince(s.saleDate) >= debtAgeFilter);
-  }, [sales, search, onlyOwed, viewMonth, debtAgeFilter]);
+  }, [sales, q, onlyOwed, viewMonth, debtAgeFilter, monthFilterActive]);
 
   // Um mês só é arquivado por inteiro (a rota de arquivar pega todas as
   // vendas do mês de uma vez) — então "sem vendas ativas mas com vendas no
   // includeArchived=1" significa "esse mês está arquivado", não "vazio".
   const isMonthArchived = useMemo(() => {
-    if (onlyOwed) return false;
-    const inMonth = (s: Sale) => {
-      const [y, m] = s.saleDate.split("T")[0].split("-").map(Number);
-      return y === viewMonth.year && m === viewMonth.month + 1;
-    };
-    return !sales.some(inMonth) && allSales.some(inMonth);
-  }, [sales, allSales, onlyOwed, viewMonth]);
+    if (!monthFilterActive) return false;
+    return !sales.some((s) => inMonth(s, viewMonth.year, viewMonth.month)) && allSales.some((s) => inMonth(s, viewMonth.year, viewMonth.month));
+  }, [sales, allSales, monthFilterActive, viewMonth]);
 
   const totals = useMemo(() => {
     return filteredSales.reduce(
@@ -264,21 +288,21 @@ export default function VendasPage() {
         </button>
       </div>
 
-      <div className={`flex items-center justify-center gap-3 ${onlyOwed ? "opacity-40" : ""}`}>
+      <div className={`flex items-center justify-center gap-3 ${monthFilterActive ? "" : "opacity-40"}`}>
         <button
           onClick={() => goToMonth(-1)}
-          disabled={onlyOwed}
+          disabled={!monthFilterActive}
           aria-label="Mês anterior"
           className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none"
         >
           ◀
         </button>
         <span className="w-36 text-center text-sm font-medium text-zinc-200">
-          {onlyOwed ? "Todas as datas" : `${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}`}
+          {monthFilterActive ? `${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}` : "Todas as datas"}
         </span>
         <button
           onClick={() => goToMonth(1)}
-          disabled={onlyOwed || isCurrentMonth}
+          disabled={!monthFilterActive || isCurrentMonth}
           aria-label="Próximo mês"
           className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
         >
@@ -286,7 +310,7 @@ export default function VendasPage() {
         </button>
       </div>
 
-      {!onlyOwed && isMonthArchived && (
+      {monthFilterActive && isMonthArchived && (
         <div className="text-center">
           <p className="text-xs text-zinc-500">
             🔒 {MONTH_NAMES[viewMonth.month]} de {viewMonth.year} está arquivado.
@@ -300,7 +324,7 @@ export default function VendasPage() {
         </div>
       )}
 
-      {!onlyOwed && !isMonthArchived && filteredSales.length > 0 && (
+      {monthFilterActive && !isMonthArchived && filteredSales.length > 0 && (
         <div className="text-center">
           <button
             onClick={() => {

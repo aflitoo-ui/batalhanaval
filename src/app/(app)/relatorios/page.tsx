@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 type Sale = {
   id: number;
@@ -11,6 +13,7 @@ type Sale = {
   quantity: number;
   unitBuyPrice: number;
   unitSellPrice: number;
+  adjustment: number;
   total: number;
   paid: number;
   owed: number;
@@ -21,11 +24,31 @@ function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function daysSince(iso: string) {
+  const saleDate = new Date(iso.split("T")[0] + "T00:00:00");
+  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  return Math.round((today.getTime() - saleDate.getTime()) / 86400000);
+}
+
 type ProductAgg = { name: string; quantity: number; revenue: number; cost: number; profit: number; marginPct: number };
-type CustomerAgg = { key: string; name: string; total: number; paid: number; owed: number; profit: number };
+type CustomerAgg = { key: string; id: number | null; name: string; total: number; paid: number; owed: number; profit: number };
 type MonthAgg = { key: string; label: string; total: number; profit: number };
 
 const MONTH_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+function currentYearMonth() {
+  const d = new Date();
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function inMonth(s: Sale, year: number, month: number) {
+  const [y, m] = s.saleDate.split("T")[0].split("-").map(Number);
+  return y === year && m === month + 1;
+}
 
 function aggregateByMonth(sales: Sale[]): MonthAgg[] {
   const map = new Map<string, MonthAgg>();
@@ -41,15 +64,20 @@ function aggregateByMonth(sales: Sale[]): MonthAgg[] {
   return Array.from(map.values()).sort((a, b) => b.key.localeCompare(a.key));
 }
 
+// Receita/lucro por produto usam só qtd × preço (nunca s.total/s.profit) —
+// o "ajuste no total" de uma venda é uma cobrança/desconto solto, não algo
+// gerado pelo produto em si. Somar ele aqui inflava (ou derrubava) a margem
+// de qualquer produto que por acaso estivesse numa venda com ajuste.
 function aggregateByProduct(sales: Sale[]): ProductAgg[] {
   const map = new Map<string, ProductAgg>();
   for (const s of sales) {
+    const revenue = s.quantity * s.unitSellPrice;
     const cost = s.quantity * s.unitBuyPrice;
     const entry = map.get(s.productName) || { name: s.productName, quantity: 0, revenue: 0, cost: 0, profit: 0, marginPct: 0 };
     entry.quantity += s.quantity;
-    entry.revenue += s.total;
+    entry.revenue += revenue;
     entry.cost += cost;
-    entry.profit += s.profit;
+    entry.profit += revenue - cost;
     map.set(s.productName, entry);
   }
   return Array.from(map.values()).map((p) => ({ ...p, marginPct: p.cost > 0 ? (p.profit / p.cost) * 100 : 0 }));
@@ -62,7 +90,7 @@ function aggregateByCustomer(sales: Sale[]): CustomerAgg[] {
     // nome — assim o mesmo cliente com produtos diferentes conta como um
     // único cliente no ranking, mesmo se o nome dele mudar depois.
     const key = s.customerId != null ? `id:${s.customerId}` : `name:${s.customerName || ""}`;
-    const entry = map.get(key) || { key, name: s.customerName || "-", total: 0, paid: 0, owed: 0, profit: 0 };
+    const entry = map.get(key) || { key, id: s.customerId, name: s.customerName || "-", total: 0, paid: 0, owed: 0, profit: 0 };
     entry.total += s.total;
     entry.paid += s.paid;
     entry.owed += s.owed;
@@ -70,6 +98,42 @@ function aggregateByCustomer(sales: Sale[]): CustomerAgg[] {
     map.set(key, entry);
   }
   return Array.from(map.values());
+}
+
+const AGE_BUCKETS: [string, number, number][] = [
+  ["Até 30 dias", 0, 30],
+  ["31 a 60 dias", 31, 60],
+  ["61 a 90 dias", 61, 90],
+  ["Mais de 90 dias", 91, Infinity],
+];
+
+// Sempre sobre TODAS as vendas (ignora o filtro de período) — é a mesma
+// lógica de "Só quem deve" em Vendas: dívida é uma situação atual, não do
+// mês que você está olhando.
+function aggregateDebtAging(sales: Sale[]) {
+  const buckets = AGE_BUCKETS.map(([label]) => ({ label, total: 0, count: 0 }));
+  for (const s of sales) {
+    if (s.owed <= 0.001) continue;
+    const age = daysSince(s.saleDate);
+    const idx = AGE_BUCKETS.findIndex(([, min, max]) => age >= min && age <= max);
+    if (idx >= 0) {
+      buckets[idx].total += s.owed;
+      buckets[idx].count += 1;
+    }
+  }
+  return buckets;
+}
+
+function downloadCSV(filename: string, header: string[], rows: (string | number)[][]) {
+  const escape = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [header, ...rows].map((r) => r.map(escape).join(",")).join("\r\n");
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function RankedBars({
@@ -107,12 +171,36 @@ function RankedBars({
   );
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+function Panel({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-      <h2 className="mb-4 text-sm font-semibold text-zinc-200">{title}</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-zinc-200">{title}</h2>
+        {action}
+      </div>
       {children}
     </div>
+  );
+}
+
+function SummaryCard({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "red" }) {
+  const color = tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-zinc-100";
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className={`mt-1 text-lg font-bold ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function ExportButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-md px-2.5 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
+    >
+      ⭳ Exportar CSV
+    </button>
   );
 }
 
@@ -120,10 +208,13 @@ type ProductSortKey = "quantity" | "revenue" | "profit" | "marginPct";
 type CustomerSortKey = "total" | "profit" | "owed";
 
 export default function RelatoriosPage() {
+  const router = useRouter();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [productSort, setProductSort] = useState<ProductSortKey>("quantity");
   const [customerSort, setCustomerSort] = useState<CustomerSortKey>("total");
+  const [viewMonth, setViewMonth] = useState(currentYearMonth);
+  const [allTime, setAllTime] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -136,30 +227,69 @@ export default function RelatoriosPage() {
     })();
   }, []);
 
-  const products = useMemo(() => aggregateByProduct(sales), [sales]);
-  const customers = useMemo(() => aggregateByCustomer(sales), [sales]);
+  const isCurrentMonth = viewMonth.year === currentYearMonth().year && viewMonth.month === currentYearMonth().month;
+
+  function goToMonth(delta: number) {
+    setViewMonth((v) => {
+      const d = new Date(v.year, v.month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  }
+
+  // Faturamento/Lucro por mês e o aging de dívida continuam olhando o
+  // histórico inteiro (são visões de tendência/situação atual) — só os
+  // totais, produtos e clientes respeitam o período selecionado.
+  const periodSales = useMemo(
+    () => (allTime ? sales : sales.filter((s) => inMonth(s, viewMonth.year, viewMonth.month))),
+    [sales, allTime, viewMonth]
+  );
+
+  const products = useMemo(() => aggregateByProduct(periodSales), [periodSales]);
+  const customers = useMemo(() => aggregateByCustomer(periodSales), [periodSales]);
   const recentMonths = useMemo(() => aggregateByMonth(sales).slice(0, 6), [sales]);
+  const debtAging = useMemo(() => aggregateDebtAging(sales), [sales]);
+
+  const totals = useMemo(
+    () =>
+      periodSales.reduce(
+        (acc, s) => ({ revenue: acc.revenue + s.total, profit: acc.profit + s.profit, owed: acc.owed + s.owed }),
+        { revenue: 0, profit: 0, owed: 0 }
+      ),
+    [periodSales]
+  );
 
   const topByQuantity = useMemo(
-    () =>
-      [...products]
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 6)
-        .map((p) => ({ name: p.name, value: p.quantity })),
+    () => [...products].sort((a, b) => b.quantity - a.quantity).slice(0, 6).map((p) => ({ name: p.name, value: p.quantity })),
     [products]
   );
 
   const topByProfit = useMemo(
-    () =>
-      [...products]
-        .sort((a, b) => b.profit - a.profit)
-        .slice(0, 6)
-        .map((p) => ({ name: p.name, value: p.profit })),
+    () => [...products].sort((a, b) => b.profit - a.profit).slice(0, 6).map((p) => ({ name: p.name, value: p.profit })),
     [products]
   );
 
   const sortedProducts = useMemo(() => [...products].sort((a, b) => b[productSort] - a[productSort]), [products, productSort]);
   const sortedCustomers = useMemo(() => [...customers].sort((a, b) => b[customerSort] - a[customerSort]), [customers, customerSort]);
+
+  function goToCustomerSales(name: string) {
+    router.push(`/?cliente=${encodeURIComponent(name)}`);
+  }
+
+  function exportProductsCSV() {
+    downloadCSV(
+      "relatorios-produtos.csv",
+      ["Produto", "Qtd vendida", "Receita", "Lucro", "Retorno (%)"],
+      sortedProducts.map((p) => [p.name, p.quantity, p.revenue.toFixed(2), p.profit.toFixed(2), p.marginPct.toFixed(0)])
+    );
+  }
+
+  function exportCustomersCSV() {
+    downloadCSV(
+      "relatorios-clientes.csv",
+      ["Cliente", "Total comprado", "Pago", "Deve", "Lucro gerado"],
+      sortedCustomers.map((c) => [c.name, c.total.toFixed(2), c.paid.toFixed(2), c.owed.toFixed(2), c.profit.toFixed(2)])
+    );
+  }
 
   if (loading) {
     return <p className="text-sm text-zinc-500">Carregando...</p>;
@@ -177,6 +307,43 @@ export default function RelatoriosPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-zinc-100">Relatórios</h1>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          onClick={() => setAllTime((v) => !v)}
+          className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+            allTime ? "bg-zinc-700 text-zinc-100" : "bg-zinc-900 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300"
+          }`}
+        >
+          Todas as datas
+        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => goToMonth(-1)}
+            aria-label="Mês anterior"
+            className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+          >
+            ◀
+          </button>
+          <span className="w-36 text-center text-sm font-medium text-zinc-200">
+            {allTime ? "Todas as datas" : `${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}`}
+          </span>
+          <button
+            onClick={() => goToMonth(1)}
+            disabled={!allTime && isCurrentMonth}
+            aria-label="Próximo mês"
+            className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <SummaryCard label="Faturamento" value={formatBRL(totals.revenue)} />
+        <SummaryCard label="Lucro" value={formatBRL(totals.profit)} tone="emerald" />
+        <SummaryCard label="A receber" value={formatBRL(totals.owed)} tone={totals.owed > 0.001 ? "red" : undefined} />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Faturamento por mês">
@@ -197,6 +364,22 @@ export default function RelatoriosPage() {
         </Panel>
       </div>
 
+      <Panel title="Dívida em aberto por idade">
+        {debtAging.every((b) => b.total === 0) ? (
+          <p className="py-2 text-sm text-zinc-500">Ninguém deve nada no momento.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {debtAging.map((b) => (
+              <div key={b.label} className="rounded-lg border border-zinc-800 bg-zinc-950 p-3">
+                <p className="text-xs text-zinc-500">{b.label}</p>
+                <p className={`mt-1 text-base font-bold ${b.total > 0 ? "text-red-400" : "text-zinc-600"}`}>{formatBRL(b.total)}</p>
+                <p className="text-[11px] text-zinc-600">{b.count} venda(s)</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Produtos mais vendidos (quantidade)">
           <RankedBars items={topByQuantity} valueKey="quantity" formatValue={(n) => String(n)} color="#3987e5" />
@@ -206,7 +389,7 @@ export default function RelatoriosPage() {
         </Panel>
       </div>
 
-      <Panel title="Todos os produtos">
+      <Panel title="Todos os produtos" action={<ExportButton onClick={exportProductsCSV} />}>
         <div className="mb-3 flex flex-wrap gap-2">
           {(
             [
@@ -227,40 +410,44 @@ export default function RelatoriosPage() {
             </button>
           ))}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] table-fixed text-sm">
-            <colgroup>
-              <col className="w-[30%]" />
-              <col className="w-[17.5%]" />
-              <col className="w-[17.5%]" />
-              <col className="w-[17.5%]" />
-              <col className="w-[17.5%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wide text-zinc-500">
-                <th className="py-1.5 pr-3">Produto</th>
-                <th className="py-1.5 pr-3 text-right">Qtd vendida</th>
-                <th className="py-1.5 pr-3 text-right">Receita</th>
-                <th className="py-1.5 pr-3 text-right">Lucro</th>
-                <th className="py-1.5 text-right">Retorno</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedProducts.map((p) => (
-                <tr key={p.name} className="border-b border-zinc-900 last:border-0">
-                  <td className="truncate py-1.5 pr-3 font-medium text-zinc-200">{p.name}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{p.quantity}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{formatBRL(p.revenue)}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums text-emerald-400">{formatBRL(p.profit)}</td>
-                  <td className="py-1.5 text-right tabular-nums text-zinc-300">{p.marginPct.toFixed(0)}%</td>
+        {sortedProducts.length === 0 ? (
+          <p className="py-4 text-sm text-zinc-500">Nenhuma venda nesse período.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[30%]" />
+                <col className="w-[17.5%]" />
+                <col className="w-[17.5%]" />
+                <col className="w-[17.5%]" />
+                <col className="w-[17.5%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wide text-zinc-500">
+                  <th className="py-1.5 pr-3">Produto</th>
+                  <th className="py-1.5 pr-3 text-right">Qtd vendida</th>
+                  <th className="py-1.5 pr-3 text-right">Receita</th>
+                  <th className="py-1.5 pr-3 text-right">Lucro</th>
+                  <th className="py-1.5 text-right">Retorno</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {sortedProducts.map((p) => (
+                  <tr key={p.name} className="border-b border-zinc-900 last:border-0">
+                    <td className="truncate py-1.5 pr-3 font-medium text-zinc-200">{p.name}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{p.quantity}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{formatBRL(p.revenue)}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-emerald-400">{formatBRL(p.profit)}</td>
+                    <td className="py-1.5 text-right tabular-nums text-zinc-300">{p.marginPct.toFixed(0)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Panel>
 
-      <Panel title="Melhores clientes">
+      <Panel title="Melhores clientes" action={<ExportButton onClick={exportCustomersCSV} />}>
         <div className="mb-3 flex flex-wrap gap-2">
           {(
             [
@@ -280,37 +467,46 @@ export default function RelatoriosPage() {
             </button>
           ))}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] table-fixed text-sm">
-            <colgroup>
-              <col className="w-[30%]" />
-              <col className="w-[17.5%]" />
-              <col className="w-[17.5%]" />
-              <col className="w-[17.5%]" />
-              <col className="w-[17.5%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wide text-zinc-500">
-                <th className="py-1.5 pr-3">Cliente</th>
-                <th className="py-1.5 pr-3 text-right">Total comprado</th>
-                <th className="py-1.5 pr-3 text-right">Pago</th>
-                <th className="py-1.5 pr-3 text-right">Deve</th>
-                <th className="py-1.5 text-right">Lucro gerado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedCustomers.map((c) => (
-                <tr key={c.key} className="border-b border-zinc-900 last:border-0">
-                  <td className="truncate py-1.5 pr-3 font-medium text-amber-400">{c.name}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{formatBRL(c.total)}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums text-emerald-400">{formatBRL(c.paid)}</td>
-                  <td className="py-1.5 pr-3 text-right tabular-nums text-red-400">{c.owed > 0 ? formatBRL(c.owed) : "-"}</td>
-                  <td className="py-1.5 text-right tabular-nums text-emerald-400">{formatBRL(c.profit)}</td>
+        {sortedCustomers.length === 0 ? (
+          <p className="py-4 text-sm text-zinc-500">Nenhuma venda nesse período.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] table-fixed text-sm">
+              <colgroup>
+                <col className="w-[30%]" />
+                <col className="w-[17.5%]" />
+                <col className="w-[17.5%]" />
+                <col className="w-[17.5%]" />
+                <col className="w-[17.5%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wide text-zinc-500">
+                  <th className="py-1.5 pr-3">Cliente</th>
+                  <th className="py-1.5 pr-3 text-right">Total comprado</th>
+                  <th className="py-1.5 pr-3 text-right">Pago</th>
+                  <th className="py-1.5 pr-3 text-right">Deve</th>
+                  <th className="py-1.5 text-right">Lucro gerado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {sortedCustomers.map((c) => (
+                  <tr
+                    key={c.key}
+                    onClick={c.id != null ? () => goToCustomerSales(c.name) : undefined}
+                    className={`border-b border-zinc-900 last:border-0 ${c.id != null ? "cursor-pointer hover:bg-zinc-800/50" : ""}`}
+                    title={c.id != null ? "Ver vendas desse cliente" : undefined}
+                  >
+                    <td className="truncate py-1.5 pr-3 font-medium text-amber-400">{c.name}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-zinc-300">{formatBRL(c.total)}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-emerald-400">{formatBRL(c.paid)}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-red-400">{c.owed > 0 ? formatBRL(c.owed) : "-"}</td>
+                    <td className="py-1.5 text-right tabular-nums text-emerald-400">{formatBRL(c.profit)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Panel>
     </div>
   );
