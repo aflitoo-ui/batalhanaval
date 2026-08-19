@@ -88,6 +88,7 @@ export function UsuariosClient() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [rowError, setRowError] = useState<{ id: number; message: string } | null>(null);
+  const [rowInfo, setRowInfo] = useState<{ id: number; message: string } | null>(null);
   const [resetId, setResetId] = useState<number | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -305,6 +306,18 @@ export function UsuariosClient() {
     setInviteGrantId(null);
     setInviteGrantQty("1");
     load();
+  }
+
+  async function handleSendPasswordResetLink(u: User) {
+    setRowError(null);
+    setRowInfo(null);
+    const res = await fetch(`/api/users/${u.id}/send-password-reset`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setRowError({ id: u.id, message: data?.error || "Erro ao enviar link." });
+      return;
+    }
+    setRowInfo({ id: u.id, message: "Link enviado pelo Telegram!" });
   }
 
   function renderActions(u: User, align: "start" | "end") {
@@ -544,6 +557,17 @@ export function UsuariosClient() {
             </MenuItem>
             {u.telegramLinked && (
               <MenuItem
+                tone="success"
+                onClick={() => {
+                  setMenuAnchor(null);
+                  handleSendPasswordResetLink(u);
+                }}
+              >
+                enviar link de nova senha
+              </MenuItem>
+            )}
+            {u.telegramLinked && (
+              <MenuItem
                 tone="danger"
                 onClick={() => {
                   setMenuAnchor(null);
@@ -661,6 +685,7 @@ export function UsuariosClient() {
                 </p>
                 <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
                 {rowError && rowError.id === u.id && <p className="mt-1 text-xs text-red-400">{rowError.message}</p>}
+                {rowInfo && rowInfo.id === u.id && <p className="mt-1 text-xs text-emerald-400">{rowInfo.message}</p>}
               </div>
             ))}
           </div>
@@ -716,6 +741,9 @@ export function UsuariosClient() {
                       {renderActions(u, "end")}
                       {rowError && rowError.id === u.id && (
                         <p className="mt-1 text-right text-xs text-red-400">{rowError.message}</p>
+                      )}
+                      {rowInfo && rowInfo.id === u.id && (
+                        <p className="mt-1 text-right text-xs text-emerald-400">{rowInfo.message}</p>
                       )}
                     </td>
                   </tr>

@@ -24,6 +24,7 @@ const ACTION_LABEL: Record<string, string> = {
   grant_invite_credit: "Liberou +1 convite",
   generate_invite: "Gerou link de convite",
   signup_via_invite: "Padrinho de novo cadastro",
+  send_password_reset: "Mandou link de redefinir senha (Telegram)",
 };
 
 function actionLabel(action: string) {

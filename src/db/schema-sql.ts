@@ -243,4 +243,18 @@ CREATE INDEX IF NOT EXISTS idx_invites_created_by ON invites(created_by);
 -- e a pessoa não recebe nada por e-mail, só acompanha pelo próprio STRIX.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_email TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS billing_email_skipped BOOLEAN NOT NULL DEFAULT false;
+
+-- Redefinição de senha por link mandado no Telegram — o admin gera um
+-- token de uso único, manda pelo bot, a pessoa clica e escolhe a própria
+-- senha nova. Ninguém (nem o admin, nem quem vê o chat) chega a ver essa
+-- senha em texto puro. Mesmo espírito de uso único do código de convite.
+CREATE TABLE IF NOT EXISTS password_resets (
+  id SERIAL PRIMARY KEY,
+  token TEXT UNIQUE NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
 `;
