@@ -827,13 +827,13 @@ function SaleModal({
                       <button
                         onClick={() => handleDeletePayment(h.id)}
                         disabled={deletingPaymentId === h.id}
-                        className="text-xs font-medium text-zinc-400 hover:text-emerald-400 disabled:opacity-60"
+                        className="rounded-md px-2 py-1 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-emerald-400 disabled:opacity-60"
                       >
                         {deletingPaymentId === h.id ? "..." : "sim"}
                       </button>
                       <button
                         onClick={() => setConfirmDeletePaymentId(null)}
-                        className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
+                        className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
                       >
                         não
                       </button>
@@ -841,7 +841,7 @@ function SaleModal({
                   ) : (
                     <button
                       onClick={() => setConfirmDeletePaymentId(h.id)}
-                      className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                      className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
                     >
                       remover
                     </button>

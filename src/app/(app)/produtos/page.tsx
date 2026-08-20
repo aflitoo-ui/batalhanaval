@@ -213,13 +213,13 @@ export default function ProdutosPage() {
                       <button
                         onClick={() => handleSaveEdit(p)}
                         disabled={editSaving}
-                        className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-60"
+                        className="rounded-md px-2 py-1 text-sm font-medium text-emerald-400 transition hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-60"
                       >
                         salvar
                       </button>
                       <button
                         onClick={() => setEditId(null)}
-                        className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                        className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
                       >
                         cancelar
                       </button>
@@ -256,13 +256,13 @@ export default function ProdutosPage() {
                           <span className="text-xs text-zinc-400">Excluir?</span>
                           <button
                             onClick={() => handleDelete(p)}
-                            className="text-xs font-medium text-zinc-400 hover:text-emerald-400"
+                            className="rounded-md px-2 py-1 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-emerald-400"
                           >
                             sim
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
+                            className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
                           >
                             não
                           </button>
@@ -271,7 +271,7 @@ export default function ProdutosPage() {
                         <>
                           <button
                             onClick={() => toggleActive(p)}
-                            className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+                            className="rounded-md px-2 py-1 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
                           >
                             {p.active ? "desativar" : "reativar"}
                           </button>
@@ -280,7 +280,7 @@ export default function ProdutosPage() {
                               setDeleteError(null);
                               setConfirmDeleteId(p.id);
                             }}
-                            className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                            className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
                           >
                             excluir
                           </button>
@@ -348,13 +348,13 @@ export default function ProdutosPage() {
                         <button
                           onClick={() => handleSaveEdit(p)}
                           disabled={editSaving}
-                          className="text-xs font-medium text-emerald-400 hover:text-emerald-300 disabled:opacity-60"
+                          className="rounded-md px-2 py-1 text-sm font-medium text-emerald-400 transition hover:bg-zinc-800 hover:text-emerald-300 disabled:opacity-60"
                         >
                           salvar
                         </button>
                         <button
                           onClick={() => setEditId(null)}
-                          className="text-xs font-medium text-zinc-500 hover:text-zinc-300"
+                          className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
                         >
                           cancelar
                         </button>
@@ -386,13 +386,13 @@ export default function ProdutosPage() {
                             <span className="text-xs text-zinc-400">Excluir?</span>
                             <button
                               onClick={() => handleDelete(p)}
-                              className="text-xs font-medium text-zinc-400 hover:text-emerald-400"
+                              className="rounded-md px-2 py-1 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-emerald-400"
                             >
                               sim
                             </button>
                             <button
                               onClick={() => setConfirmDeleteId(null)}
-                              className="ml-2 text-xs font-medium text-zinc-500 hover:text-red-400"
+                              className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
                             >
                               não
                             </button>
@@ -401,7 +401,7 @@ export default function ProdutosPage() {
                           <>
                             <button
                               onClick={() => toggleActive(p)}
-                              className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
+                              className="rounded-md px-2 py-1 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
                             >
                               {p.active ? "desativar" : "reativar"}
                             </button>
@@ -410,7 +410,7 @@ export default function ProdutosPage() {
                                 setDeleteError(null);
                                 setConfirmDeleteId(p.id);
                               }}
-                              className="text-xs font-medium text-zinc-500 hover:text-red-400"
+                              className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
                             >
                               excluir
                             </button>
