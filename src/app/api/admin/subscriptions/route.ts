@@ -40,7 +40,11 @@ export const GET = withApiErrors("admin.subscriptions.GET", async () => {
     (acc, r) => {
       acc.total++;
       if (r.status === "active" || r.status === "trialing" || r.status === "granted") acc.ativos++;
-      else if (r.status === "canceled" || r.status === "expired") acc.cancelados++;
+      // Estorno/chargeback também são "sem acesso" (acesso já foi cortado
+      // na hora, ver getAccessStatus) — entram no mesmo grupo de
+      // cancelados/expirados pra esse resumo.
+      else if (r.status === "canceled" || r.status === "expired" || r.status === "refunded" || r.status === "chargeback")
+        acc.cancelados++;
       else if (r.status === "past_due") acc.inadimplentes++;
       return acc;
     },

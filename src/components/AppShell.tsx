@@ -97,7 +97,13 @@ function SupportLink({ className }: { className: string }) {
 function subscriptionStatusMessage(status: string | undefined, daysLeft: number) {
   const dias = `${daysLeft} dia${daysLeft === 1 ? "" : "s"}`;
   if (status === "canceled") {
-    return daysLeft > 0 ? `Sua assinatura expira em ${dias}.` : "Sua assinatura expira hoje.";
+    return daysLeft > 0 ? `Cancelada por você — expira em ${dias}.` : "Cancelada por você — expira hoje.";
+  }
+  if (status === "refunded") {
+    return "Pagamento estornado.";
+  }
+  if (status === "chargeback") {
+    return "Pagamento contestado.";
   }
   if (status === "active") {
     return daysLeft > 0 ? `Sua assinatura vence em ${dias}.` : "Sua assinatura vence hoje.";
@@ -133,8 +139,12 @@ export default function AppShell({
   useEffect(() => {
     if (daysLeft === undefined) return;
     if (sessionStorage.getItem("strix_banner_seen")) return;
-    // Assinatura cancelada com muito prazo ainda pela frente não precisa
-    // avisar toda hora — só vira útil quando o fim já está próximo.
+    // Assinatura cancelada pelo próprio cliente com muito prazo ainda pela
+    // frente não precisa avisar toda hora — só vira útil quando o fim já
+    // está próximo. Estorno/chargeback NÃO entram nessa supressão: o acesso
+    // já foi cortado na hora (nem deveriam chegar até aqui, já que a tela
+    // fica bloqueada nesses casos — ver getAccessStatus), então se algum dia
+    // aparecerem, o aviso deve aparecer sempre, sem esperar prazo nenhum.
     if (subscriptionStatus === "canceled" && daysLeft > 5) return;
     setBannerVisible(true);
     const t = setTimeout(() => {

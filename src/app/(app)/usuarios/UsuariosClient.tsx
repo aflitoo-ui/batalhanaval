@@ -51,6 +51,8 @@ const ACCESS_LABEL: Record<string, string> = {
   pending: "Aguardando pagamento",
   past_due: "Pagamento atrasado",
   canceled: "Cancelado",
+  refunded: "Estornado",
+  chargeback: "Contestado",
   expired: "Bloqueado",
   none: "Sem assinatura",
 };

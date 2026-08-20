@@ -9,6 +9,8 @@ export const SUBSCRIPTION_TONE: Record<string, string> = {
   pending: "bg-amber-950 text-amber-400",
   past_due: "bg-red-950 text-red-400",
   canceled: "bg-amber-950 text-amber-400",
+  refunded: "bg-red-950 text-red-400",
+  chargeback: "bg-red-950 text-red-400",
   expired: "bg-red-950 text-red-400",
   none: "bg-zinc-800 text-zinc-500",
 };

@@ -73,7 +73,12 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
            VALUES ($1, $2, 0, 'refunded')`,
           [sub.id, event.providerPaymentId]
         );
-        await tx.get(`UPDATE subscriptions SET status = 'canceled', updated_at = now() WHERE id = $1`, [sub.id]);
+        // Status próprio (não 'canceled') — o dinheiro já voltou pro
+        // cliente, então o acesso é cortado na hora (ver getAccessStatus em
+        // src/lib/subscription.ts), diferente do cancelamento voluntário,
+        // que ainda respeita o período já pago. Sem canceled_at: essa coluna
+        // é só pro cancelamento pelo próprio cliente.
+        await tx.get(`UPDATE subscriptions SET status = 'refunded', updated_at = now() WHERE id = $1`, [sub.id]);
         break;
       case "payment_chargeback":
         await tx.get(
@@ -81,7 +86,10 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
            VALUES ($1, $2, 0, 'chargeback')`,
           [sub.id, event.providerPaymentId]
         );
-        await tx.get(`UPDATE subscriptions SET status = 'canceled', updated_at = now() WHERE id = $1`, [sub.id]);
+        // Mesma lógica do estorno (acesso cortado na hora), status próprio
+        // porque chargeback costuma indicar disputa/fraude — mais grave que
+        // um estorno normal, por isso o alerta extra no Telegram logo abaixo.
+        await tx.get(`UPDATE subscriptions SET status = 'chargeback', updated_at = now() WHERE id = $1`, [sub.id]);
         break;
       case "subscription_canceled":
       case "subscription_expired":
@@ -104,7 +112,9 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
       payment_approved: `✅ Pagamento aprovado: ${alertTarget.email} — ${amountBRL}`,
       payment_failed: `⚠️ Pagamento falhou: ${alertTarget.email}`,
       payment_refunded: `💸 Pagamento estornado: ${alertTarget.email}`,
-      payment_chargeback: `🚫 Chargeback: ${alertTarget.email}`,
+      // Chargeback costuma indicar disputa/fraude — mais sério que um
+      // estorno normal, mensagem já mais grave direto (sem duplicar alerta).
+      payment_chargeback: `🚨 Chargeback em disputa — verifique a conta de ${alertTarget.email}.`,
       subscription_canceled: `❌ Assinatura cancelada: ${alertTarget.email}`,
       subscription_expired: `❌ Assinatura expirada: ${alertTarget.email}`,
     };

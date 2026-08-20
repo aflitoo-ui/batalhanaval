@@ -4,7 +4,17 @@ import type { CurrentUser } from "@/lib/auth";
 
 export type AccessStatus = {
   allowed: boolean;
-  status: "trialing" | "active" | "granted" | "pending" | "past_due" | "canceled" | "expired" | "none";
+  status:
+    | "trialing"
+    | "active"
+    | "granted"
+    | "pending"
+    | "past_due"
+    | "canceled"
+    | "refunded"
+    | "chargeback"
+    | "expired"
+    | "none";
   daysLeft?: number;
 };
 
@@ -56,6 +66,13 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
       return { allowed: true, status: "pending", daysLeft: Math.max(daysLeft, 0) };
     }
     return { allowed: false, status: "pending" };
+  }
+
+  if (sub.status === "refunded" || sub.status === "chargeback") {
+    // Diferente de "canceled" (decisão do cliente, respeita o período já
+    // pago), estorno e chargeback significam que o dinheiro voltou (ou está
+    // em disputa) — o acesso é cortado na hora, ignorando current_period_end.
+    return { allowed: false, status: sub.status };
   }
 
   if (sub.status === "active" || sub.status === "canceled") {

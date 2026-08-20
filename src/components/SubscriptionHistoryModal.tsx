@@ -21,6 +21,8 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "Aguardando pagamento",
   past_due: "Inadimplente",
   canceled: "Cancelada",
+  refunded: "Estornada",
+  chargeback: "Contestada",
   expired: "Expirada",
 };
 
