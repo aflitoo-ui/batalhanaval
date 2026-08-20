@@ -84,9 +84,9 @@ export default function TelegramLinkPopup() {
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && dismiss()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)]"
+      className="fixed inset-0 z-50 flex touch-none items-center justify-center bg-black/60 px-4 pb-[env(safe-area-inset-bottom)] pt-[calc(env(safe-area-inset-top)+1rem)]"
     >
-      <div className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="w-full max-w-md touch-auto rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <div className="mb-1 flex items-start justify-between gap-2">
           <h2 className="text-base font-bold text-zinc-100">Vincular Telegram</h2>
           <button

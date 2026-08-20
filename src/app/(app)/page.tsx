@@ -568,9 +568,9 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/60 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)]"
+      className="fixed inset-0 z-50 flex touch-none items-center justify-center overscroll-contain bg-black/60 px-4 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)]"
     >
-      <div className="flex max-h-full w-full max-w-md flex-col rounded-xl border border-zinc-800 bg-zinc-900">
+      <div className="flex max-h-full w-full max-w-md touch-auto flex-col rounded-xl border border-zinc-800 bg-zinc-900">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-800 p-5 pb-4">
           <h2 className="text-base font-bold text-zinc-100">{title}</h2>
           <button

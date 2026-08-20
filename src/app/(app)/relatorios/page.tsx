@@ -330,26 +330,35 @@ export default function RelatoriosPage() {
         >
           Todas as datas
         </button>
-        <div className="flex items-center gap-3">
+        {allTime ? (
           <button
-            onClick={() => goToMonth(-1)}
-            aria-label="Mês anterior"
-            className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+            onClick={() => setAllTime(false)}
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-[#946ce0] transition hover:bg-zinc-900"
           >
-            ◀
+            📅 Ver por mês
           </button>
-          <span className="w-36 text-center text-sm font-medium text-zinc-200">
-            {allTime ? "Todas as datas" : `${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}`}
-          </span>
-          <button
-            onClick={() => goToMonth(1)}
-            disabled={!allTime && isCurrentMonth}
-            aria-label="Próximo mês"
-            className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
-          >
-            ▶
-          </button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => goToMonth(-1)}
+              aria-label="Mês anterior"
+              className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+            >
+              ◀
+            </button>
+            <span className="w-36 text-center text-sm font-medium text-zinc-200">
+              {MONTH_NAMES[viewMonth.month]} {viewMonth.year}
+            </span>
+            <button
+              onClick={() => goToMonth(1)}
+              disabled={isCurrentMonth}
+              aria-label="Próximo mês"
+              className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
+            >
+              ▶
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

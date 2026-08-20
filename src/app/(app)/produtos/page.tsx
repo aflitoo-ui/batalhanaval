@@ -184,7 +184,11 @@ export default function ProdutosPage() {
           {/* Cartões — telas pequenas */}
           <div className="space-y-3 md:hidden">
             {products.map((p) => (
-              <div key={p.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+              <div
+                key={p.id}
+                onClick={() => editId !== p.id && startEdit(p)}
+                className={`rounded-lg border border-zinc-800 bg-zinc-900 p-3 ${editId === p.id ? "" : "active:bg-zinc-800/50"}`}
+              >
                 {editId === p.id ? (
                   <div className="space-y-2">
                     <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input" autoFocus />
@@ -243,7 +247,10 @@ export default function ProdutosPage() {
                         <p className="text-zinc-300">{formatBRL(p.defaultSellPrice)}</p>
                       </div>
                     </div>
-                    <div className="mt-3 flex items-center justify-end gap-3 border-t border-zinc-800 pt-2">
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 flex items-center justify-end gap-3 border-t border-zinc-800 pt-2"
+                    >
                       {confirmDeleteId === p.id ? (
                         <>
                           <span className="text-xs text-zinc-400">Excluir?</span>
@@ -262,12 +269,6 @@ export default function ProdutosPage() {
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={() => startEdit(p)}
-                            className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
-                          >
-                            editar
-                          </button>
                           <button
                             onClick={() => toggleActive(p)}
                             className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
@@ -361,7 +362,11 @@ export default function ProdutosPage() {
                     </td>
                   </tr>
                 ) : (
-                  <tr key={p.id} className="border-b border-zinc-900 last:border-0">
+                  <tr
+                    key={p.id}
+                    onClick={() => startEdit(p)}
+                    className="cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50"
+                  >
                     <td className="px-4 py-2 font-medium text-zinc-200">{p.name}</td>
                     <td className="px-4 py-2 text-zinc-300">{formatBRL(p.defaultBuyPrice)}</td>
                     <td className="px-4 py-2 text-zinc-300">{formatBRL(p.defaultSellPrice)}</td>
@@ -374,7 +379,7 @@ export default function ProdutosPage() {
                         {p.active ? "Ativo" : "Inativo"}
                       </span>
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                         {confirmDeleteId === p.id ? (
                           <>
@@ -394,12 +399,6 @@ export default function ProdutosPage() {
                           </>
                         ) : (
                           <>
-                            <button
-                              onClick={() => startEdit(p)}
-                              className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
-                            >
-                              editar
-                            </button>
                             <button
                               onClick={() => toggleActive(p)}
                               className="text-xs font-medium text-zinc-400 hover:text-zinc-200"
