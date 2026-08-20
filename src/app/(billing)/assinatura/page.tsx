@@ -9,7 +9,17 @@ const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
 type AccessStatus = {
   allowed: boolean;
-  status: "trialing" | "active" | "pending" | "past_due" | "canceled" | "expired" | "none";
+  status:
+    | "trialing"
+    | "active"
+    | "granted"
+    | "pending"
+    | "past_due"
+    | "canceled"
+    | "refunded"
+    | "chargeback"
+    | "expired"
+    | "none";
   daysLeft?: number;
 };
 
@@ -46,6 +56,8 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "Aguardando pagamento",
   past_due: "Pagamento atrasado",
   canceled: "Cancelada",
+  refunded: "Pagamento estornado",
+  chargeback: "Pagamento contestado",
   expired: "Expirada",
   none: "Sem assinatura",
 };
@@ -78,6 +90,7 @@ export default function AssinaturaPage() {
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/subscriptions/me");
@@ -126,6 +139,17 @@ export default function AssinaturaPage() {
     navigator.clipboard.writeText(code).then(() => {
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2000);
+    });
+  }
+
+  // Dois jeitos de compartilhar o mesmo convite — quem vai falar o código
+  // por telefone quer só o código puro, quem vai mandar por mensagem quer
+  // o link pronto (a página de cadastro já lê ?c= e preenche sozinha).
+  function handleCopyInviteLink(code: string) {
+    const link = `${window.location.origin}/cadastro?c=${code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedLink(code);
+      setTimeout(() => setCopiedLink(null), 2000);
     });
   }
 
@@ -300,8 +324,8 @@ export default function AssinaturaPage() {
                   }
                   if (subscription.status === "canceled") {
                     return dias
-                      ? `Assinatura cancelada — o acesso termina em ${dias}.`
-                      : "Assinatura cancelada — o acesso termina hoje.";
+                      ? `Cancelada por você — o acesso termina em ${dias}.`
+                      : "Cancelada por você — o acesso termina hoje.";
                   }
                   if (subscription.status === "granted") {
                     return dias ? `Acesso liberado — termina em ${dias}.` : "Acesso liberado — termina hoje.";
@@ -319,7 +343,11 @@ export default function AssinaturaPage() {
 
             {!access?.allowed && (
               <p className="mt-3 text-sm text-red-400">
-                Seu acesso está bloqueado. Assine para continuar usando o STRIX.
+                {subscription.status === "refunded"
+                  ? "Pagamento estornado — seu acesso foi bloqueado."
+                  : subscription.status === "chargeback"
+                    ? "Pagamento contestado — seu acesso foi bloqueado."
+                    : "Seu acesso está bloqueado. Assine para continuar usando o STRIX."}
               </p>
             )}
 
@@ -379,6 +407,8 @@ export default function AssinaturaPage() {
                 subscription.status === "granted" ||
                 subscription.status === "expired" ||
                 subscription.status === "canceled" ||
+                subscription.status === "refunded" ||
+                subscription.status === "chargeback" ||
                 subscription.status === "past_due" ||
                 subscription.status === "pending") && (
                 <div>
@@ -469,16 +499,23 @@ export default function AssinaturaPage() {
           </p>
 
           {inviteStatus.invites.map((inv) => (
-            <button
-              key={inv.code}
-              onClick={() => handleCopyInvite(inv.code)}
-              className="mt-3 flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-left transition hover:bg-zinc-900"
-            >
-              <code className="flex-1 truncate text-sm text-zinc-200">{inv.code}</code>
-              <span className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200">
-                {copiedCode === inv.code ? "Copiado!" : "Copiar"}
-              </span>
-            </button>
+            <div key={inv.code} className="mt-3 rounded-lg border border-zinc-800 bg-zinc-950 p-2.5">
+              <code className="block truncate text-sm text-zinc-200">{inv.code}</code>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => handleCopyInvite(inv.code)}
+                  className="flex-1 rounded-md bg-zinc-800 px-2.5 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-700"
+                >
+                  {copiedCode === inv.code ? "Copiado!" : "Copiar código"}
+                </button>
+                <button
+                  onClick={() => handleCopyInviteLink(inv.code)}
+                  className="flex-1 rounded-md bg-[#3a2268] px-2.5 py-1.5 text-xs font-medium text-white transition hover:bg-[#6139ae]"
+                >
+                  {copiedLink === inv.code ? "Copiado!" : "Copiar link"}
+                </button>
+              </div>
+            </div>
           ))}
 
           {inviteStatus.credits > 0 && (
