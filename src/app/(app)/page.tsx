@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useStandalone } from "@/lib/useStandalone";
 
 type Product = {
   id: number;
@@ -126,6 +127,7 @@ export default function VendasPage() {
 function VendasPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isStandalone = useStandalone();
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -230,12 +232,14 @@ function VendasPageInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-zinc-100">Vendas</h1>
-        <button
-          onClick={() => setShowNewSale(true)}
-          className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500"
-        >
-          + Nova venda
-        </button>
+        {!isStandalone && (
+          <button
+            onClick={() => setShowNewSale(true)}
+            className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500"
+          >
+            + Nova venda
+          </button>
+        )}
       </div>
 
       <div className={`flex items-center justify-center gap-3 ${monthFilterActive ? "" : "opacity-40"}`}>
@@ -528,6 +532,20 @@ function VendasPageInner() {
             load();
           }}
         />
+      )}
+      {/* Botão flutuante — só no web-app instalado, igual ao FAB do mobile.
+          No navegador normal, "+ Nova venda" no topo já cumpre esse papel. */}
+      {isStandalone && (
+        <button
+          onClick={() => setShowNewSale(true)}
+          aria-label="Nova venda"
+          className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#946ce0] text-white shadow-lg shadow-black/40 transition hover:bg-[#a883e8]"
+          style={{ bottom: "calc(64px + env(safe-area-inset-bottom) + 16px)" }}
+        >
+          <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+          </svg>
+        </button>
       )}
     </div>
   );
