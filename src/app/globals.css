@@ -37,6 +37,10 @@ button:not(:disabled) {
 button,
 a {
   touch-action: manipulation;
+  /* Sem isso, tocar num botão sem fundo próprio (ex: as setas de mês) deixa
+     pra trás um retângulo azulado colado no toque — o destaque nativo de
+     toque do WebKit/Chrome mobile, recortado pelo rounded-md do botão. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* O ícone padrão do input de data é escuro e quase some no fundo escuro do
