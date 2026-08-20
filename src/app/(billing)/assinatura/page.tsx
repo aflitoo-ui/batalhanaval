@@ -385,7 +385,7 @@ export default function AssinaturaPage() {
                   <button
                     onClick={() => handleSubscribe()}
                     disabled={starting}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+                    className="rounded-lg bg-[#946ce0] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
                   >
                     {starting
                       ? "Abrindo pagamento..."
@@ -450,7 +450,7 @@ export default function AssinaturaPage() {
                   href={telegramStatus.deepLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-block rounded-lg bg-[#3c1a7b] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#5224a8]"
+                  className="mt-3 inline-block rounded-lg bg-[#946ce0] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a883e8]"
                 >
                   Vincular Telegram
                 </a>
@@ -485,7 +485,7 @@ export default function AssinaturaPage() {
             <button
               onClick={handleGenerateInvite}
               disabled={generatingInvite}
-              className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+              className="mt-3 rounded-lg bg-[#946ce0] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
             >
               {generatingInvite ? "Gerando..." : "Gerar código de convite"}
             </button>

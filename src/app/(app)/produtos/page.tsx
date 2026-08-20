@@ -175,7 +175,7 @@ export default function ProdutosPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+            className="rounded-md bg-[#946ce0] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
           >
             Adicionar produto
           </button>
