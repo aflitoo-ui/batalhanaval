@@ -5,8 +5,52 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { CurrentUser } from "@/lib/auth";
 import { useIdleLogout } from "@/lib/useIdleLogout";
+import { useStandalone } from "@/lib/useStandalone";
 import PullToRefresh from "@/components/PullToRefresh";
 import TelegramLinkPopup from "@/components/TelegramLinkPopup";
+
+const TAB_ICONS: Record<string, React.ReactNode> = {
+  "/": (
+    <path
+      d="M3 4h2l2.6 12.4a2 2 0 0 0 2 1.6h7.4a2 2 0 0 0 2-1.6L21 8H6M10 20a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4Zm7-.2a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4Z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  "/produtos": (
+    <path
+      d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3ZM4 7.5 12 12l8-4.5M12 12v9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  "/clientes": (
+    <path
+      d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M14.5 14.2c2.5.3 4.5 2.4 4.5 5.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  "/relatorios": <path d="M4 20V10M10 20V4M16 20v-7M20 20H4" strokeLinecap="round" strokeLinejoin="round" />,
+  account: (
+    <path d="M12 8a3.2 3.2 0 1 0 0 6.4A3.2 3.2 0 0 0 12 8ZM5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  admin: (
+    <path
+      d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3ZM9 12l2 2 4-4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+};
+
+function TabIcon({ name }: { name: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
+      {TAB_ICONS[name]}
+    </svg>
+  );
+}
 
 const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
@@ -62,6 +106,7 @@ export default function AppShell({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(false);
+  const isStandalone = useStandalone();
   useIdleLogout(IDLE_LOGOUT_MS);
 
   // Mostra o aviso de assinatura por só 5s e some sozinho — reaparece de
@@ -173,7 +218,9 @@ export default function AppShell({
           <button
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Abrir menu"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-300 hover:bg-zinc-900 md:hidden"
+            className={`flex h-9 w-9 items-center justify-center rounded-md text-zinc-300 hover:bg-zinc-900 md:hidden ${
+              isStandalone ? "hidden" : ""
+            }`}
           >
             {menuOpen ? (
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -233,8 +280,42 @@ export default function AppShell({
         )}
       </header>
       <PullToRefresh>
-        <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+        <main className={`mx-auto max-w-6xl px-4 py-6 ${isStandalone ? "pb-[calc(64px+env(safe-area-inset-bottom))]" : ""}`}>
+          {children}
+        </main>
       </PullToRefresh>
+      {isStandalone && (
+        <nav
+          role="navigation"
+          aria-label="Navegação principal"
+          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        >
+          {NAV.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
+                  active ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                <TabIcon name={item.href} />
+                {item.label}
+              </Link>
+            );
+          })}
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
+              menuOpen ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <TabIcon name={user.role === "admin" ? "admin" : "account"} />
+            {user.role === "admin" ? "Admin" : "Conta"}
+          </button>
+        </nav>
+      )}
     </div>
   );
 }
