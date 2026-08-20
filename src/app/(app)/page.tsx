@@ -552,8 +552,20 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  // Trava o scroll do body enquanto o modal está aberto — sem isso, no PWA
+  // instalado (sem barra de endereço pra absorver o gesto), um scroll
+  // dentro do modal que "estoura" o topo/fim vira puxar-pra-atualizar da
+  // página por trás, recarregando tudo e fechando o modal sem querer.
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overscroll-contain bg-black/60 px-4 py-6">
       <div className="flex max-h-full w-full max-w-md flex-col rounded-xl border border-zinc-800 bg-zinc-900">
         <div className="flex shrink-0 items-center justify-between border-b border-zinc-800 p-5 pb-4">
           <h2 className="text-base font-bold text-zinc-100">{title}</h2>
@@ -561,7 +573,7 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
             ✕
           </button>
         </div>
-        <div className="overflow-y-auto p-5 pt-4">{children}</div>
+        <div className="overflow-y-auto overscroll-contain p-5 pt-4">{children}</div>
       </div>
     </div>
   );
