@@ -56,6 +56,7 @@ export default function AssinaturaPage() {
   const [access, setAccess] = useState<AccessStatus | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [canceling, setCanceling] = useState(false);
@@ -489,10 +490,10 @@ export default function AssinaturaPage() {
 
       {history.length > 0 && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="mb-3 text-sm font-semibold text-zinc-200">Histórico de pagamentos</h2>
+          <h2 className="mb-3 text-sm font-semibold text-zinc-200">Histórico de assinaturas</h2>
           <table className="w-full text-sm">
             <tbody>
-              {history.map((h) => (
+              {(showAllHistory ? history : history.slice(0, 8)).map((h) => (
                 <tr key={h.id} className="border-b border-zinc-900 last:border-0">
                   <td className="py-1.5 text-zinc-400">{formatDate(h.paidAt)}</td>
                   <td className="py-1.5 text-zinc-300">
@@ -505,6 +506,14 @@ export default function AssinaturaPage() {
               ))}
             </tbody>
           </table>
+          {history.length > 8 && (
+            <button
+              onClick={() => setShowAllHistory((v) => !v)}
+              className="mt-3 text-xs font-medium text-zinc-500 transition hover:text-zinc-300"
+            >
+              {showAllHistory ? "Mostrar menos" : `Ver histórico completo (${history.length})`}
+            </button>
+          )}
         </div>
       )}
     </div>
