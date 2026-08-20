@@ -61,7 +61,7 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
   // contra roubo de sessão via XSS.
   const isMobileClient = req.headers.get("x-strix-client") === "mobile";
   return NextResponse.json({
-    user: { id: user.id, email: user.email },
+    user: { id: user.id, email: user.email, role: user.role },
     ...(isMobileClient ? { token } : {}),
   });
 });

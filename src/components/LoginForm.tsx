@@ -38,7 +38,9 @@ export function LoginForm() {
       }
       sessionStorage.removeItem("strix_banner_seen");
       localStorage.setItem("strix_last_activity", String(Date.now()));
-      router.push("/");
+      // Admin não tem vendas/produtos/clientes próprios — a tela de Vendas
+      // fica sempre vazia pra ele. Cai direto na área administrativa.
+      router.push(data.user?.role === "admin" ? "/usuarios" : "/");
       router.refresh();
     } catch {
       setError("Erro de conexão. Tente novamente.");
