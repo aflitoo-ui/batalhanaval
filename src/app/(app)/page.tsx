@@ -48,18 +48,6 @@ function formatDate(iso: string) {
   return `${d}/${m}`;
 }
 
-// Deixa o campo inteiro clicável pra abrir o calendário, não só o ícone
-// (que é minúsculo e quase invisível no fundo escuro). showPicker() pode não
-// existir em todo navegador e pode reclamar fora de um gesto real do
-// usuário — por isso o try/catch, silencioso, sem quebrar o campo.
-function openDatePicker(e: React.MouseEvent<HTMLInputElement>) {
-  try {
-    e.currentTarget.showPicker?.();
-  } catch {
-    // sem suporte ou fora de um gesto do usuário — o clique no ícone continua funcionando normalmente
-  }
-}
-
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -904,13 +892,7 @@ function SaleModal({
               />
             </Field>
             <Field label="Data">
-              <input
-                type="date"
-                value={paidAt}
-                onChange={(e) => setPaidAt(e.target.value)}
-                onClick={openDatePicker}
-                className="input"
-              />
+              <DateField value={paidAt} onChange={setPaidAt} />
             </Field>
           </div>
           <Field label="Observação (opcional)">
@@ -944,13 +926,7 @@ function SaleModal({
       <form onSubmit={handleSaveEdit} className="space-y-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data">
-            <input
-              type="date"
-              value={saleDate}
-              onChange={(e) => setSaleDate(e.target.value)}
-              onClick={openDatePicker}
-              className="input"
-            />
+            <DateField value={saleDate} onChange={setSaleDate} />
           </Field>
           <Field label="Produto">
             <select value={productId} onChange={(e) => setProductId(Number(e.target.value))} className="input">
@@ -1347,15 +1323,9 @@ function NewSaleModal({
           onCustomerCreated={onCustomerCreated}
           usage={customerUsage}
         />
-        <div className="grid grid-cols-[53fr_47fr] gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Data">
-            <input
-              type="date"
-              value={saleDate}
-              onChange={(e) => setSaleDate(e.target.value)}
-              onClick={openDatePicker}
-              className="input overflow-hidden text-ellipsis whitespace-nowrap"
-            />
+            <DateField value={saleDate} onChange={setSaleDate} />
           </Field>
           <Field label="Quantidade" labelClassName="pl-[3%]">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
@@ -1606,6 +1576,165 @@ function CustomerPicker({
       {createError && <p className="mt-1 text-xs text-red-400">{createError}</p>}
     </div>
   );
+}
+
+const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
+
+// Calendário próprio, sem depender do <input type="date"> nativo — no PWA
+// instalado o picker nativo do Android/Chrome abre num azul do sistema que
+// não tem nada a ver com o resto do app (é um componente de sistema, não dá
+// pra estilizar via CSS). Mesma abordagem do DateField do mobile.
+function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const selected = isoToLocalDate(value);
+  const [viewYear, setViewYear] = useState(selected.getFullYear());
+  const [viewMonth, setViewMonth] = useState(selected.getMonth());
+
+  function openPicker() {
+    const d = isoToLocalDate(value);
+    setViewYear(d.getFullYear());
+    setViewMonth(d.getMonth());
+    setOpen(true);
+  }
+
+  function changeMonth(delta: number) {
+    let m = viewMonth + delta;
+    let y = viewYear;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    }
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+    setViewMonth(m);
+    setViewYear(y);
+  }
+
+  function pick(day: number) {
+    onChange(dateToLocalIso(new Date(viewYear, viewMonth, day)));
+    setOpen(false);
+  }
+
+  const weeks = getMonthMatrix(viewYear, viewMonth);
+  const today = new Date();
+
+  return (
+    <>
+      <button type="button" onClick={openPicker} className="input text-left">
+        {formatDisplayDate(selected)}
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-[60] flex touch-none items-center justify-center overscroll-contain bg-black/60 px-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-[280px] touch-auto rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => changeMonth(-1)}
+                aria-label="Mês anterior"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 text-zinc-300 transition hover:bg-zinc-800"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <span className="text-sm font-bold text-zinc-100">
+                {MONTH_NAMES[viewMonth]} {viewYear}
+              </span>
+              <button
+                type="button"
+                onClick={() => changeMonth(1)}
+                aria-label="Próximo mês"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-700 text-zinc-300 transition hover:bg-zinc-800"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-7">
+              {WEEKDAYS.map((w, i) => (
+                <span key={i} className="py-1 text-center text-xs font-semibold text-zinc-500">
+                  {w}
+                </span>
+              ))}
+            </div>
+            {weeks.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7">
+                {week.map((day, di) => {
+                  if (day == null) return <div key={di} className="aspect-square" />;
+                  const isSelected =
+                    day === selected.getDate() && viewMonth === selected.getMonth() && viewYear === selected.getFullYear();
+                  const isToday = day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+                  return (
+                    <button
+                      key={di}
+                      type="button"
+                      onClick={() => pick(day)}
+                      style={isSelected ? { backgroundColor: "#3a2268" } : undefined}
+                      className={`aspect-square rounded-md text-sm transition ${
+                        isSelected
+                          ? "font-bold text-white"
+                          : isToday
+                            ? "font-bold text-[#a483d9] hover:bg-zinc-800"
+                            : "text-zinc-200 hover:bg-zinc-800"
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                onChange(dateToLocalIso(new Date()));
+                setOpen(false);
+              }}
+              className="mt-2 w-full rounded-md border-t border-zinc-800 pt-2 text-center text-sm font-medium text-[#a483d9] transition hover:text-[#c2aaf0]"
+            >
+              Hoje
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function getMonthMatrix(year: number, month: number): (number | null)[][] {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
+function isoToLocalDate(iso: string): Date {
+  const [y, m, d] = (iso || "").slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return new Date();
+  return new Date(y, m - 1, d);
+}
+
+function dateToLocalIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDisplayDate(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 function Field({
