@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SubscriptionHistoryModal } from "@/components/SubscriptionHistoryModal";
+import { subscriptionTone } from "@/lib/subscriptionTone";
 
 type Row = {
   userId: number;
@@ -41,6 +42,15 @@ const STATUS_LABEL: Record<string, string> = {
   canceled: "Cancelada",
   expired: "Expirada",
 };
+
+function StatusBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-zinc-600">-</span>;
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${subscriptionTone(status)}`}>
+      {STATUS_LABEL[status] || status}
+    </span>
+  );
+}
 
 export function AssinaturasAdminClient() {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -104,7 +114,7 @@ export function AssinaturasAdminClient() {
                   {r.price ? formatBRL(r.price) : "-"}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{r.status ? STATUS_LABEL[r.status] || r.status : "-"}</p>
+              <p className="mt-1.5"><StatusBadge status={r.status} /></p>
               <p className="mt-1.5 text-xs text-zinc-500">
                 Próx. cobrança: {formatDate(r.currentPeriodEnd)} ·{" "}
                 <span className={r.daysLeft !== null && r.daysLeft <= 5 ? "font-medium text-amber-400" : ""}>
@@ -149,8 +159,8 @@ export function AssinaturasAdminClient() {
                   className="cursor-pointer border-b border-zinc-900 transition last:border-0 hover:bg-zinc-900"
                 >
                   <td className="truncate px-4 py-2 font-medium text-zinc-200">{r.email}</td>
-                  <td className="px-4 py-2 text-zinc-300">
-                    {r.status ? STATUS_LABEL[r.status] || r.status : "-"}
+                  <td className="px-4 py-2">
+                    <StatusBadge status={r.status} />
                   </td>
                   <td className="px-4 py-2 text-right text-zinc-300">{r.price ? formatBRL(r.price) : "-"}</td>
                   <td className="px-4 py-2 text-zinc-400">{formatDate(r.currentPeriodEnd)}</td>

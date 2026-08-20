@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SubscriptionHistoryModal } from "@/components/SubscriptionHistoryModal";
+import { subscriptionTone } from "@/lib/subscriptionTone";
 
 // Login não é mais um e-mail (ver src/lib/schemas.ts) — impede digitar
 // caracteres que lembrem um, pra ninguém acabar escolhendo um login no
@@ -70,6 +71,15 @@ function accessLabel(sub: SubInfo | undefined): string {
     return sub.daysLeft !== null && sub.daysLeft > 0 ? `${base} · ${sub.daysLeft}d` : base;
   }
   return base;
+}
+
+function AccessBadge({ sub }: { sub: SubInfo | undefined }) {
+  if (!sub) return <span className="text-zinc-600">-</span>;
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${subscriptionTone(sub.status)}`}>
+      {accessLabel(sub)}
+    </span>
+  );
 }
 
 export function UsuariosClient() {
@@ -676,18 +686,20 @@ export function UsuariosClient() {
                       </span>
                     )}
                   </p>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                      u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
-                    }`}
-                  >
-                    {u.active ? "Ativo" : "Inativo"}
+                  <span className="flex shrink-0 gap-1.5">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
+                      }`}
+                    >
+                      {u.active ? "Ativo" : "Inativo"}
+                    </span>
+                    {u.role !== "admin" && <AccessBadge sub={subStatusByUser[u.id]} />}
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-zinc-500">
                   {u.role === "admin" ? "Admin" : "Usuário"} · desde {formatDate(u.createdAt)} · último acesso:{" "}
-                  <LastSeenCell iso={u.lastSeenAt} now={now} /> · acesso:{" "}
-                  {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
+                  <LastSeenCell iso={u.lastSeenAt} now={now} />
                   {u.inviteCredits > 0 && <span className="text-emerald-400"> · {u.inviteCredits} convite{u.inviteCredits === 1 ? "" : "s"}</span>}
                 </p>
                 <div className="mt-3 border-t border-zinc-800 pt-2">{renderActions(u, "start")}</div>
@@ -746,10 +758,14 @@ export function UsuariosClient() {
                       <LastSeenCell iso={u.lastSeenAt} now={now} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-2 text-zinc-400">
-                      {u.role === "admin" ? "-" : accessLabel(subStatusByUser[u.id])}
-                      {u.inviteCredits > 0 && (
-                        <span className="text-emerald-400"> · {u.inviteCredits} convite{u.inviteCredits === 1 ? "" : "s"}</span>
-                      )}
+                      <span className="flex items-center gap-1.5">
+                        {u.role === "admin" ? <span className="text-zinc-600">-</span> : <AccessBadge sub={subStatusByUser[u.id]} />}
+                        {u.inviteCredits > 0 && (
+                          <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                            {u.inviteCredits} convite{u.inviteCredits === 1 ? "" : "s"}
+                          </span>
+                        )}
+                      </span>
                     </td>
                     <td className="px-4 py-2">
                       {renderActions(u, "end")}
