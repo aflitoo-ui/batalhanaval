@@ -1205,6 +1205,7 @@ function NewSaleModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const router = useRouter();
   const [saleDate, setSaleDate] = useState(todayISO());
   const [productId, setProductId] = useState<number | "">(products[0]?.id ?? "");
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -1217,6 +1218,7 @@ function NewSaleModal({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const isStandalone = useStandalone();
 
   function handleProductChange(id: number) {
     setProductId(id);
@@ -1300,15 +1302,21 @@ function NewSaleModal({
   if (products.length === 0) {
     return (
       <ModalShell title="Nova venda" onClose={onClose}>
-        <p className="text-sm text-zinc-400">
-          Cadastre um produto na aba <strong>Produtos</strong> antes de lançar uma venda.
-        </p>
+        <div className="text-center">
+          <p className="font-semibold text-zinc-100">Nenhum produto cadastrado</p>
+          <p className="mt-1 text-sm text-zinc-400">Antes de lançar uma venda, cadastre pelo menos um produto.</p>
+          <button
+            onClick={() => router.push("/produtos")}
+            className="mt-4 w-full rounded-lg bg-zinc-800 py-2 text-sm font-medium text-white transition hover:bg-zinc-700"
+          >
+            Cadastrar produto
+          </button>
+        </div>
       </ModalShell>
     );
   }
 
-  return (
-    <ModalShell title="Nova venda" onClose={onClose}>
+  const formBody = (
       <form onSubmit={handleSubmit} className="space-y-3">
         <ProductPicker products={products} value={productId || null} onChange={handleProductChange} />
         <CustomerPicker
@@ -1404,8 +1412,32 @@ function NewSaleModal({
           {saving ? "Salvando..." : "Salvar venda"}
         </button>
       </form>
-    </ModalShell>
   );
+
+  // No web-app instalado, "Nova venda" abre como tela cheia (igual ao
+  // mobile — tela própria, não modal flutuando no meio da tela), com um
+  // cabeçalho "← Vendas" no lugar do X. No navegador normal continua modal.
+  if (isStandalone) {
+    return (
+      <div className="fixed inset-x-0 top-0 z-50 flex flex-col overscroll-contain bg-zinc-950 pt-[env(safe-area-inset-top)]" style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}>
+        <div className="flex shrink-0 items-center gap-3 border-b border-zinc-800 p-4">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Vendas
+          </button>
+          <h2 className="text-base font-bold text-zinc-100">Nova venda</h2>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4">{formBody}</div>
+      </div>
+    );
+  }
+
+  return <ModalShell title="Nova venda" onClose={onClose}>{formBody}</ModalShell>;
 }
 
 // Busca + chips, igual ao seletor de produto do mobile — mais rápido de
