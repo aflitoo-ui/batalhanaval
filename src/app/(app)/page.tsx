@@ -1432,6 +1432,8 @@ function NewSaleModal({
   if (isStandalone) {
     return (
       <div
+        role="dialog"
+        aria-modal="true"
         className="fixed inset-x-0 top-0 z-50 flex touch-none flex-col overscroll-contain bg-zinc-950 pt-[env(safe-area-inset-top)]"
         style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
       >
