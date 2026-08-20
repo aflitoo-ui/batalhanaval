@@ -238,38 +238,19 @@ export default function AppShell({
         {menuOpen && (
           <div className="border-t border-zinc-800 px-4 py-3 md:hidden">
             <nav className="flex flex-col gap-1">
-              {menuPanelNav.map((item) => {
-                // No painel do web-app, "Minha assinatura" costuma sobrar
-                // sozinha ali (o resto virou aba da barra de baixo) — sem
-                // destaque, ficava um texto fraco boiando sozinho.
-                const isSubscription = isStandalone && item.href === "/assinatura";
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={
-                      isSubscription
-                        ? "flex items-center gap-2 rounded-lg bg-[#946ce0]/15 px-3 py-2.5 text-sm font-semibold text-[#a883e8] transition hover:bg-[#946ce0]/25"
-                        : `rounded-md px-3 py-2 text-sm font-medium transition ${
-                            pathname === item.href
-                              ? "bg-zinc-800 text-white"
-                              : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
-                          }`
-                    }
-                  >
-                    {isSubscription && (
-                      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <path
-                          d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm0 3h18M7 15h4"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {menuPanelNav.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                    pathname === item.href
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
               {adminNav.length > 0 && <div className="my-2 border-t border-zinc-800" />}
               {adminNav.map((item) => (
                 <Link
@@ -312,7 +293,10 @@ export default function AppShell({
           className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
         >
           {NAV.map((item) => {
-            const active = pathname === item.href;
+            // Com o menu "Conta" aberto, ele é quem está em foco — a aba de
+            // rota (ex: Relatórios) não deveria continuar acesa junto,
+            // senão parece que duas abas estão ativas ao mesmo tempo.
+            const active = pathname === item.href && !menuOpen;
             return (
               <Link
                 key={item.href}
@@ -326,15 +310,31 @@ export default function AppShell({
               </Link>
             );
           })}
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-              menuOpen ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            <TabIcon name={user.role === "admin" ? "admin" : "account"} />
-            {user.role === "admin" ? "Admin" : "Conta"}
-          </button>
+          {user.role === "admin" ? (
+            // Admin não tem uma página única — "Admin" abre o menu com
+            // Usuários/Assinaturas/Log pra escolher.
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
+                menuOpen ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <TabIcon name="admin" />
+              Admin
+            </button>
+          ) : (
+            // Igual às outras abas: navega direto pra página de assinatura,
+            // sem menu suspenso no meio do caminho.
+            <Link
+              href="/assinatura"
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
+                pathname === "/assinatura" ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <TabIcon name="account" />
+              Conta
+            </Link>
+          )}
         </nav>
       )}
     </div>
