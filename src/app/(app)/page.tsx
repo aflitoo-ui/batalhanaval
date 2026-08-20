@@ -1449,7 +1449,7 @@ function NewSaleModal({
           </button>
           <h2 className="text-base font-bold text-zinc-100">Nova venda</h2>
         </div>
-        <div className="touch-auto flex-1 overflow-y-auto overscroll-contain p-4">{formBody}</div>
+        <div className="touch-pan-y flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4">{formBody}</div>
       </div>
     );
   }
