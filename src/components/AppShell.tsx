@@ -237,19 +237,38 @@ export default function AppShell({
         {menuOpen && (
           <div className="border-t border-zinc-800 px-4 py-3 md:hidden">
             <nav className="flex flex-col gap-1">
-              {menuPanelNav.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`rounded-md px-3 py-2 text-sm font-medium transition ${
-                    pathname === item.href
-                      ? "bg-zinc-800 text-white"
-                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {menuPanelNav.map((item) => {
+                // No painel do web-app, "Minha assinatura" costuma sobrar
+                // sozinha ali (o resto virou aba da barra de baixo) — sem
+                // destaque, ficava um texto fraco boiando sozinho.
+                const isSubscription = isStandalone && item.href === "/assinatura";
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={
+                      isSubscription
+                        ? "flex items-center gap-2 rounded-lg bg-[#946ce0]/15 px-3 py-2.5 text-sm font-semibold text-[#a883e8] transition hover:bg-[#946ce0]/25"
+                        : `rounded-md px-3 py-2 text-sm font-medium transition ${
+                            pathname === item.href
+                              ? "bg-zinc-800 text-white"
+                              : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                          }`
+                    }
+                  >
+                    {isSubscription && (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2}>
+                        <path
+                          d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Zm0 3h18M7 15h4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                    {item.label}
+                  </Link>
+                );
+              })}
               {adminNav.length > 0 && <div className="my-2 border-t border-zinc-800" />}
               {adminNav.map((item) => (
                 <Link
