@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useStandalone } from "@/lib/useStandalone";
 
 type Product = {
   id: number;
@@ -15,8 +16,11 @@ function formatBRL(n: number) {
 }
 
 export default function ProdutosPage() {
+  const isStandalone = useStandalone();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [buyPrice, setBuyPrice] = useState("");
   const [sellPrice, setSellPrice] = useState("");
@@ -37,6 +41,11 @@ export default function ProdutosPage() {
     setProducts(data.products || []);
     setLoading(false);
   }
+
+  const visibleProducts = useMemo(() => {
+    const t = search.trim().toLowerCase();
+    return t ? products.filter((p) => p.name.toLowerCase().includes(t)) : products;
+  }, [products, search]);
 
   useEffect(() => {
     void load();
@@ -66,6 +75,7 @@ export default function ProdutosPage() {
     setName("");
     setBuyPrice("");
     setSellPrice("");
+    setShowForm(false);
     load();
   }
 
@@ -128,48 +138,96 @@ export default function ProdutosPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold text-zinc-100">Produtos</h1>
 
-      <form
-        onSubmit={handleAdd}
-        className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4"
-      >
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-400">Nome</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-40 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            placeholder="Ex: Água"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-400">Preço de custo</label>
-          <input
-            value={buyPrice}
-            onChange={(e) => setBuyPrice(e.target.value)}
-            className="w-32 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            placeholder="0,00"
-            inputMode="decimal"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-400">Preço de venda</label>
-          <input
-            value={sellPrice}
-            onChange={(e) => setSellPrice(e.target.value)}
-            className="w-32 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
-            placeholder="0,00"
-            inputMode="decimal"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+      {!isStandalone && (
+        <form
+          onSubmit={handleAdd}
+          className="flex flex-wrap items-end gap-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4"
         >
-          Adicionar produto
-        </button>
-        {error && <p className="w-full text-sm text-red-400">{error}</p>}
-      </form>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-400">Nome</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-40 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+              placeholder="Ex: Água"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-400">Preço de custo</label>
+            <input
+              value={buyPrice}
+              onChange={(e) => setBuyPrice(e.target.value)}
+              className="w-32 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+              placeholder="0,00"
+              inputMode="decimal"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-zinc-400">Preço de venda</label>
+            <input
+              value={sellPrice}
+              onChange={(e) => setSellPrice(e.target.value)}
+              className="w-32 rounded-md border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+              placeholder="0,00"
+              inputMode="decimal"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-md bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+          >
+            Adicionar produto
+          </button>
+          {error && <p className="w-full text-sm text-red-400">{error}</p>}
+        </form>
+      )}
+
+      {isStandalone && (
+        <>
+          {showForm && (
+            <form onSubmit={handleAdd} className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input"
+                placeholder="Nome do produto"
+                autoFocus
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  value={buyPrice}
+                  onChange={(e) => setBuyPrice(e.target.value)}
+                  className="input"
+                  placeholder="Preço custo"
+                  inputMode="decimal"
+                />
+                <input
+                  value={sellPrice}
+                  onChange={(e) => setSellPrice(e.target.value)}
+                  className="input"
+                  placeholder="Preço venda"
+                  inputMode="decimal"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={saving}
+                className="w-full rounded-lg bg-[#946ce0] py-2.5 text-sm font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
+              >
+                {saving ? "Salvando..." : "Adicionar produto"}
+              </button>
+              {error && <p className="text-sm text-red-400">{error}</p>}
+            </form>
+          )}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input"
+            placeholder={showForm ? "Buscar produto já cadastrado" : "Buscar produto"}
+          />
+        </>
+      )}
 
       {deleteError && (
         <p className="rounded-md border border-red-900 bg-red-950/50 px-3 py-2 text-sm text-red-400">{deleteError}</p>
@@ -177,13 +235,15 @@ export default function ProdutosPage() {
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
-      ) : products.length === 0 ? (
-        <p className="py-6 text-center text-sm text-zinc-500">Nenhum produto cadastrado ainda.</p>
+      ) : visibleProducts.length === 0 ? (
+        <p className="py-6 text-center text-sm text-zinc-500">
+          {products.length === 0 ? "Nenhum produto cadastrado ainda." : "Nenhum produto encontrado."}
+        </p>
       ) : (
         <>
           {/* Cartões — telas pequenas */}
           <div className="space-y-3 md:hidden">
-            {products.map((p) => (
+            {visibleProducts.map((p) => (
               <div
                 key={p.id}
                 onClick={() => editId !== p.id && startEdit(p)}
@@ -306,7 +366,7 @@ export default function ProdutosPage() {
             </tr>
           </thead>
           <tbody>
-              {products.map((p) =>
+              {visibleProducts.map((p) =>
                 editId === p.id ? (
                   <tr key={p.id} className="border-b border-zinc-900 bg-zinc-900/40 last:border-0">
                     <td className="px-4 py-2">
@@ -425,6 +485,23 @@ export default function ProdutosPage() {
         </table>
           </div>
         </>
+      )}
+
+      {isStandalone && (
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          aria-label={showForm ? "Fechar formulário" : "Adicionar produto"}
+          className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#946ce0] text-white shadow-lg shadow-black/40 transition hover:bg-[#a883e8]"
+          style={{ bottom: "calc(64px + env(safe-area-inset-bottom) + 16px)" }}
+        >
+          <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            {showForm ? (
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            ) : (
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            )}
+          </svg>
+        </button>
       )}
     </div>
   );
