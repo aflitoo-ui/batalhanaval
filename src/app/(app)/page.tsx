@@ -1328,7 +1328,7 @@ function NewSaleModal({
           onChange={setCustomer}
           onCustomerCreated={onCustomerCreated}
         />
-        <div className="grid grid-cols-[3fr_1fr] gap-3">
+        <div className="grid grid-cols-[3fr_2fr] gap-3">
           <Field label="Data">
             <input
               type="date"
