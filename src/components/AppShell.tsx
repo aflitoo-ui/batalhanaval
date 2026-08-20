@@ -97,9 +97,7 @@ function SupportLink({ className }: { className: string }) {
 function subscriptionStatusMessage(status: string | undefined, daysLeft: number) {
   const dias = `${daysLeft} dia${daysLeft === 1 ? "" : "s"}`;
   if (status === "canceled") {
-    return daysLeft > 0
-      ? `Sua assinatura foi cancelada e o acesso termina em ${dias}.`
-      : "Sua assinatura cancelada termina hoje.";
+    return daysLeft > 0 ? `Sua assinatura expira em ${dias}.` : "Sua assinatura expira hoje.";
   }
   if (status === "active") {
     return daysLeft > 0 ? `Sua assinatura vence em ${dias}.` : "Sua assinatura vence hoje.";
@@ -135,13 +133,16 @@ export default function AppShell({
   useEffect(() => {
     if (daysLeft === undefined) return;
     if (sessionStorage.getItem("strix_banner_seen")) return;
+    // Assinatura cancelada com muito prazo ainda pela frente não precisa
+    // avisar toda hora — só vira útil quando o fim já está próximo.
+    if (subscriptionStatus === "canceled" && daysLeft > 5) return;
     setBannerVisible(true);
     const t = setTimeout(() => {
       setBannerVisible(false);
       sessionStorage.setItem("strix_banner_seen", "1");
     }, 5000);
     return () => clearTimeout(t);
-  }, [daysLeft]);
+  }, [daysLeft, subscriptionStatus]);
   // Admin não tem vendas/produtos/clientes/relatórios próprios — mostrar
   // essas abas só ocupava espaço à toa. Pro admin, a área administrativa
   // (Usuários/Assinaturas/Apadrinhamento/Log) já é a navegação principal.
