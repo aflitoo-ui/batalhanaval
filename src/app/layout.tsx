@@ -26,6 +26,24 @@ export const metadata: Metadata = {
   other: {
     "apple-mobile-web-app-capable": "yes",
   },
+  // Imagem que aparece no card de preview ao colar o link no WhatsApp/
+  // Telegram/etc — sem isso o preview cai pro favicon quadrado pequeno,
+  // esticado e cortado de forma feia dentro do card retangular.
+  openGraph: {
+    title: "STRIX",
+    description: "Seu parceiro financeiro",
+    url: "https://strix.blog",
+    siteName: "STRIX",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "STRIX",
+    description: "Seu parceiro financeiro",
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {
