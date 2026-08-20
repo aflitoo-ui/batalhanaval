@@ -64,7 +64,7 @@ export function SignupForm() {
               autoComplete="off"
               value={code}
               onChange={(e) => setCode(e.target.value.trim())}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#8148e9]"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#533094]"
             />
           </div>
           <div>
@@ -76,7 +76,7 @@ export function SignupForm() {
               autoComplete="off"
               value={email}
               onChange={(e) => setEmail(sanitizeLogin(e.target.value))}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#8148e9]"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#533094]"
             />
           </div>
           <div>
@@ -88,7 +88,7 @@ export function SignupForm() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#8148e9]"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#533094]"
               />
               <button
                 type="button"
@@ -105,7 +105,7 @@ export function SignupForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-[#8148e9] py-2 font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
+            className="w-full rounded-lg bg-[#533094] py-2 font-medium text-white transition hover:bg-[#7e64af] disabled:opacity-60"
           >
             {loading ? "Criando conta..." : "Criar conta"}
           </button>

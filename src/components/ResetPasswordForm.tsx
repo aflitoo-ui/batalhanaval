@@ -83,7 +83,7 @@ export function ResetPasswordForm() {
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#8148e9]"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#533094]"
             />
           </div>
           <div>
@@ -94,14 +94,14 @@ export function ResetPasswordForm() {
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#8148e9]"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-zinc-100 outline-none focus:border-[#533094]"
             />
           </div>
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-[#8148e9] py-2 font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
+            className="w-full rounded-lg bg-[#533094] py-2 font-medium text-white transition hover:bg-[#7e64af] disabled:opacity-60"
           >
             {loading ? "Salvando..." : "Salvar senha"}
           </button>

@@ -175,7 +175,7 @@ export default function ProdutosPage() {
           <button
             type="submit"
             disabled={saving}
-            className="rounded-md bg-[#8148e9] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
+            className="rounded-md bg-[#533094] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#7e64af] disabled:opacity-60"
           >
             Adicionar produto
           </button>
@@ -213,7 +213,7 @@ export default function ProdutosPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full rounded-lg bg-[#8148e9] py-2.5 text-sm font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
+                className="w-full rounded-lg bg-[#533094] py-2.5 text-sm font-medium text-white transition hover:bg-[#7e64af] disabled:opacity-60"
               >
                 {saving ? "Salvando..." : "Adicionar produto"}
               </button>
@@ -491,7 +491,7 @@ export default function ProdutosPage() {
         <button
           onClick={() => setShowForm((v) => !v)}
           aria-label={showForm ? "Fechar formulário" : "Adicionar produto"}
-          className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#8148e9] text-white shadow-lg shadow-black/40 transition hover:bg-[#a176ef]"
+          className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#533094] text-white shadow-lg shadow-black/40 transition hover:bg-[#7e64af]"
           style={{ bottom: "calc(64px + env(safe-area-inset-bottom) + 16px)" }}
         >
           <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={2.5}>
