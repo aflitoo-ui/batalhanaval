@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { get } from "@/db/pool";
+import { get, run } from "@/db/pool";
 import { verifyPassword, createSessionCookie } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { isRateLimited, recordRateLimitFailure, clearRateLimit } from "@/lib/rate-limit";
@@ -37,6 +37,13 @@ export const POST = withApiErrors("auth.login.POST", async (req: NextRequest) =>
 
   clearRateLimit(rateLimitKey);
   const token = await createSessionCookie(user.id);
+
+  // O popup de vincular Telegram some pro resto do login atual assim que
+  // fechado (ver TelegramLinkPopup.tsx), mas volta a aparecer no próximo
+  // login — de propósito, não é uma dispensa permanente. Sem role check:
+  // não faz mal nenhum resetar pra quem já vinculou (a rota de status
+  // ignora "dismissed" quando linked=true).
+  void run(`UPDATE users SET telegram_popup_dismissed = false WHERE id = $1`, [user.id]);
 
   // Conta admin tem acesso a tudo — avisa sempre que ela logar em produção,
   // pra dar pra notar rápido se não foi você (só em produção pra não virar

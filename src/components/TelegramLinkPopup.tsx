@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-type LinkStatus = { linked: true } | { linked: false; deepLink: string | null };
+type LinkStatus = { linked: true } | { linked: false; dismissed: boolean; deepLink: string | null };
 
 // De propósito, não existe dispensa permanente — nem "não tenho Telegram"
 // impede o popup de voltar no próximo login. É uma decisão consciente: dá
 // pra fechar (✕, Esc, clique fora ou "não tenho Telegram") e seguir usando
 // o sistema normalmente na hora, mas como vincular resolve tanto avisos
 // quanto redefinição de senha, vale insistir a cada login em vez de deixar
-// a pessoa escapar disso de vez.
+// a pessoa escapar disso de vez. O dismiss é persistido no servidor
+// (telegram_popup_dismissed) pra sobreviver a um F5/nova aba dentro do
+// mesmo login — sem isso, fechar só durava até a próxima navegação, e o
+// popup voltava a cada troca de página, não só a cada login (o login reseta
+// esse campo pra false, é isso que faz ele voltar da próxima vez).
 export default function TelegramLinkPopup() {
   const [status, setStatus] = useState<LinkStatus | null>(null);
   const [closedThisSession, setClosedThisSession] = useState(false);
@@ -22,6 +26,15 @@ export default function TelegramLinkPopup() {
     if (data) setStatus(data);
     return data as LinkStatus | null;
   }
+
+  const dismiss = useCallback(() => {
+    setClosedThisSession(true);
+    void fetch("/api/account/telegram-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "dismiss" }),
+    });
+  }, []);
 
   useEffect(() => {
     void load();
@@ -57,25 +70,25 @@ export default function TelegramLinkPopup() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setClosedThisSession(true);
+      if (e.key === "Escape") dismiss();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [dismiss]);
 
-  if (!status || status.linked || closedThisSession) return null;
+  if (!status || status.linked || status.dismissed || closedThisSession) return null;
   if (!status.deepLink) return null; // TELEGRAM_BOT_USERNAME não configurado — nada pra mostrar
 
   return (
     <div
-      onClick={(e) => e.target === e.currentTarget && setClosedThisSession(true)}
+      onClick={(e) => e.target === e.currentTarget && dismiss()}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
     >
       <div className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-5">
         <div className="mb-1 flex items-start justify-between gap-2">
           <h2 className="text-base font-bold text-zinc-100">Vincular Telegram</h2>
           <button
-            onClick={() => setClosedThisSession(true)}
+            onClick={dismiss}
             aria-label="Fechar"
             className="shrink-0 text-zinc-500 hover:text-zinc-300"
           >
@@ -97,7 +110,7 @@ export default function TelegramLinkPopup() {
         </a>
         {waitingLink && <p className="mt-2 text-center text-xs text-zinc-500">Aguardando confirmação...</p>}
         <button
-          onClick={() => setClosedThisSession(true)}
+          onClick={dismiss}
           className="mt-3 w-full text-center text-sm text-zinc-500 hover:text-zinc-300"
         >
           Não tenho Telegram
