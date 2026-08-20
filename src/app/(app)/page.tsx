@@ -1657,7 +1657,7 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Fechar"
-              className="absolute right-2 top-2 rounded-full p-1.5 text-base leading-none text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100"
+              className="absolute -right-3 -top-8 flex h-7 w-7 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800 text-sm leading-none text-zinc-300 transition hover:bg-zinc-700 hover:text-zinc-100"
             >
               ✕
             </button>

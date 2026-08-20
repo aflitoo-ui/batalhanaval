@@ -42,6 +42,26 @@ const TAB_ICONS: Record<string, React.ReactNode> = {
       strokeLinejoin="round"
     />
   ),
+  "/usuarios": (
+    <path d="M12 8a3.2 3.2 0 1 0 0 6.4A3.2 3.2 0 0 0 12 8ZM5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  "/admin/assinaturas": (
+    <path
+      d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7ZM3 10h18M7 15h4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  "/admin/convites": (
+    <path
+      d="M12 8v13M12 8c-1.5 0-4-.8-4-3.5S10.5 2 12 5c1.5-3 4-3.2 4-.5S13.5 8 12 8ZM4 12h16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3ZM3 9h18v3H3V9Z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
+  "/admin/log": (
+    <path d="M5 6h14M5 12h14M5 18h9" strokeLinecap="round" strokeLinejoin="round" />
+  ),
 };
 
 function TabIcon({ name }: { name: string }) {
@@ -122,7 +142,10 @@ export default function AppShell({
     }, 5000);
     return () => clearTimeout(t);
   }, [daysLeft]);
-  const businessNav = user.role === "admin" ? NAV : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
+  // Admin não tem vendas/produtos/clientes/relatórios próprios — mostrar
+  // essas abas só ocupava espaço à toa. Pro admin, a área administrativa
+  // (Usuários/Assinaturas/Apadrinhamento/Log) já é a navegação principal.
+  const businessNav = user.role === "admin" ? [] : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
   // No web-app instalado, Vendas/Produtos/Clientes/Relatórios já são as
   // abas da barra de baixo — repeti-las aqui dentro do menu "Conta" é
   // redundante, então só sobra o que não está lá (ex: Minha assinatura).
@@ -192,7 +215,7 @@ export default function AppShell({
                   {item.label}
                 </Link>
               ))}
-              {adminNav.length > 0 && <div className="mx-1 h-5 w-px bg-zinc-800" />}
+              {businessNav.length > 0 && adminNav.length > 0 && <div className="mx-1 h-5 w-px bg-zinc-800" />}
               {adminNav.map((item) => (
                 <Link
                   key={item.href}
@@ -267,7 +290,7 @@ export default function AppShell({
                   {item.label}
                 </Link>
               ))}
-              {adminNav.length > 0 && <div className="my-2 border-t border-zinc-800" />}
+              {menuPanelNav.length > 0 && adminNav.length > 0 && <div className="my-2 border-t border-zinc-800" />}
               {adminNav.map((item) => (
                 <Link
                   key={item.href}
@@ -308,37 +331,41 @@ export default function AppShell({
           aria-label="Navegação principal"
           className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
         >
-          {NAV.map((item) => {
-            // Com o menu "Conta" aberto, ele é quem está em foco — a aba de
-            // rota (ex: Relatórios) não deveria continuar acesa junto,
-            // senão parece que duas abas estão ativas ao mesmo tempo.
-            const active = pathname === item.href && !menuOpen;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                  active ? "text-[#3a2268]" : "text-zinc-500 hover:text-zinc-300"
-                }`}
-              >
-                <TabIcon name={item.href} />
-                {item.label}
-              </Link>
-            );
-          })}
-          {user.role === "admin" ? (
-            // Admin não tem uma página única — "Admin" abre o menu com
-            // Usuários/Assinaturas/Log pra escolher.
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                menuOpen ? "text-[#3a2268]" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <TabIcon name="admin" />
-              Admin
-            </button>
-          ) : (
+          {user.role === "admin"
+            ? // Admin não usa Vendas/Produtos/Clientes/Relatórios — a barra
+              // vira a área administrativa direto, sem menu suspenso.
+              adminNav.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
+                    pathname === item.href ? "text-[#3a2268]" : "text-zinc-500 hover:text-zinc-300"
+                  }`}
+                >
+                  <TabIcon name={item.href} />
+                  {item.label}
+                </Link>
+              ))
+            : NAV.map((item) => {
+                // Com o menu "Conta" aberto, ele é quem está em foco — a aba
+                // de rota (ex: Relatórios) não deveria continuar acesa
+                // junto, senão parece que duas abas estão ativas ao mesmo
+                // tempo.
+                const active = pathname === item.href && !menuOpen;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
+                      active ? "text-[#3a2268]" : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    <TabIcon name={item.href} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+          {user.role !== "admin" && (
             // Igual às outras abas: navega direto pra página de assinatura,
             // sem menu suspenso no meio do caminho.
             <Link
