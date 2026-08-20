@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStandalone } from "@/lib/useStandalone";
 
@@ -215,6 +215,17 @@ function VendasPageInner() {
     if (!monthFilterActive) return false;
     return !sales.some((s) => inMonth(s, viewMonth.year, viewMonth.month)) && allSales.some((s) => inMonth(s, viewMonth.year, viewMonth.month));
   }, [sales, allSales, monthFilterActive, viewMonth]);
+
+  // Ranking de "clientes mais usados" pro CustomerPicker — igual ao mobile,
+  // conta quantas vendas cada cliente tem no histórico completo (não só o
+  // mês em exibição).
+  const customerUsage = useMemo(() => {
+    const usage = new Map<number, number>();
+    for (const s of allSales) {
+      if (s.customerId != null) usage.set(s.customerId, (usage.get(s.customerId) ?? 0) + 1);
+    }
+    return usage;
+  }, [allSales]);
 
   const totals = useMemo(() => {
     return filteredSales.reduce(
@@ -485,6 +496,7 @@ function VendasPageInner() {
         <NewSaleModal
           products={products.filter((p) => p.active)}
           customers={customers.filter((c) => c.active)}
+          customerUsage={customerUsage}
           onCustomerCreated={(c) => setCustomers((prev) => [...prev, c])}
           onClose={() => setShowNewSale(false)}
           onSaved={() => {
@@ -500,6 +512,7 @@ function VendasPageInner() {
           sale={sales.find((s) => s.id === selectedSaleId)!}
           products={products.filter((p) => p.active)}
           customers={customers.filter((c) => c.active)}
+          customerUsage={customerUsage}
           onCustomerCreated={(c) => setCustomers((prev) => [...prev, c])}
           onClose={() => setSelectedSaleId(null)}
           onChanged={load}
@@ -617,6 +630,7 @@ function SaleModal({
   sale,
   products,
   customers,
+  customerUsage,
   onCustomerCreated,
   onClose,
   onChanged,
@@ -625,6 +639,7 @@ function SaleModal({
   sale: Sale;
   products: Product[];
   customers: Customer[];
+  customerUsage: Map<number, number>;
   onCustomerCreated: (c: Customer) => void;
   onClose: () => void;
   onChanged: () => void;
@@ -952,6 +967,7 @@ function SaleModal({
           value={customer}
           onChange={setCustomer}
           onCustomerCreated={onCustomerCreated}
+          usage={customerUsage}
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Quantidade">
@@ -1199,12 +1215,14 @@ function UnarchiveMonthModal({
 function NewSaleModal({
   products,
   customers,
+  customerUsage,
   onCustomerCreated,
   onClose,
   onSaved,
 }: {
   products: Product[];
   customers: Customer[];
+  customerUsage: Map<number, number>;
   onCustomerCreated: (c: Customer) => void;
   onClose: () => void;
   onSaved: () => void;
@@ -1327,8 +1345,9 @@ function NewSaleModal({
           value={customer}
           onChange={setCustomer}
           onCustomerCreated={onCustomerCreated}
+          usage={customerUsage}
         />
-        <div className="grid grid-cols-[4fr_3fr] gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Data">
             <input
               type="date"
@@ -1343,11 +1362,11 @@ function NewSaleModal({
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Preço de custo">
-            <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
           <Field label="Preço de venda">
             <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
+          </Field>
+          <Field label="Preço de custo">
+            <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -1440,12 +1459,15 @@ function ProductPicker({
   return (
     <div>
       <span className="mb-1 block text-xs font-medium text-zinc-400">Produto</span>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="input mb-2"
-        placeholder="Buscar produto..."
-      />
+      <div className="relative mb-2">
+        <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="input pl-8"
+          placeholder="Buscar produto"
+        />
+      </div>
       <div className="flex flex-wrap gap-2">
         {visible.length === 0 && <p className="text-xs text-zinc-500">Nenhum produto encontrado.</p>}
         {visible.map((p) => (
@@ -1453,10 +1475,9 @@ function ProductPicker({
             key={p.id}
             type="button"
             onClick={() => onChange(p.id)}
+            style={value === p.id ? { borderColor: "#3a2268", backgroundColor: "#3a2268" } : undefined}
             className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
-              value === p.id
-                ? "border-emerald-600 bg-emerald-600 text-white"
-                : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              value === p.id ? "text-white" : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
             }`}
           >
             {p.name}
@@ -1467,28 +1488,48 @@ function ProductPicker({
   );
 }
 
+function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.35-4.35" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function CustomerPicker({
   customers,
   value,
   onChange,
   onCustomerCreated,
-  autoFocus,
+  usage,
 }: {
   customers: Customer[];
   value: Customer | null;
   onChange: (c: Customer | null) => void;
   onCustomerCreated: (c: Customer) => void;
-  autoFocus?: boolean;
+  usage: Map<number, number>;
 }) {
-  const [query, setQuery] = useState(value?.name ?? "");
-  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const q = query.trim().toLowerCase();
-  const filtered = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : customers;
-  const exactMatch = customers.some((c) => c.name.toLowerCase() === q);
+
+  // Sem busca, mostra só os clientes mais usados (senão a lista vira uma
+  // parede de chips pra quem tem muito cliente cadastrado) — igual ao
+  // mobile. Digitar qualquer letra já busca em todos.
+  const topCustomers = useMemo(() => {
+    const ranked = [...customers].sort((a, b) => (usage.get(b.id) ?? 0) - (usage.get(a.id) ?? 0));
+    const top = ranked.slice(0, 5);
+    if (value && !top.some((c) => c.id === value.id)) {
+      const selected = customers.find((c) => c.id === value.id);
+      if (selected) top.splice(top.length - 1, 1, selected);
+    }
+    return top;
+  }, [customers, usage, value]);
+
+  const visible = q ? customers.filter((c) => c.name.toLowerCase().includes(q)) : topCustomers;
 
   async function handleCreate() {
     const name = query.trim();
@@ -1509,106 +1550,59 @@ function CustomerPicker({
     const newCustomer: Customer = { id: data.id, name, phone: null, active: true };
     onCustomerCreated(newCustomer);
     onChange(newCustomer);
-    setQuery(newCustomer.name);
-    setOpen(false);
-  }
-
-  function selectCustomer(c: Customer) {
-    onChange(c);
-    setQuery(c.name);
-    setOpen(false);
-  }
-
-  function handleCreateButtonClick() {
-    if (q && !exactMatch) {
-      handleCreate();
-      return;
-    }
-    setOpen(true);
-    inputRef.current?.focus();
+    setQuery("");
   }
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-zinc-400">Cliente</span>
+      <span className="mb-1 block text-xs font-medium text-zinc-400">Cliente</span>
+      <div className="relative mb-1">
+        <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setCreateError(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && q && visible.length === 0) {
+              e.preventDefault();
+              handleCreate();
+            }
+          }}
+          className="input pl-8"
+          placeholder="Buscar cliente"
+        />
+      </div>
+      {!q && customers.length > topCustomers.length && (
+        <p className="mb-1 text-[11px] text-zinc-500">Mais usados — digite pra ver todos</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {visible.length === 0 && !q && <p className="text-xs text-zinc-500">Nenhum cliente cadastrado.</p>}
+        {visible.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onChange(c)}
+            style={value?.id === c.id ? { borderColor: "#3a2268", backgroundColor: "#3a2268" } : undefined}
+            className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+              value?.id === c.id ? "text-white" : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+      {q && visible.length === 0 && (
         <button
           type="button"
-          onClick={handleCreateButtonClick}
+          onClick={handleCreate}
           disabled={creating}
-          className="rounded-md bg-[#3a2268] px-2 py-0.5 text-xs font-medium text-white transition hover:bg-[#6139ae] disabled:opacity-60"
+          className="mt-2 text-sm font-medium text-[#a483d9] transition hover:text-[#c2aaf0] disabled:opacity-60"
         >
-          {creating ? "Criando..." : "+ Criar cliente"}
+          {creating ? "Criando..." : `+ Criar cliente "${query.trim()}"`}
         </button>
-      </div>
-      <div className="relative">
-      <input
-        ref={inputRef}
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-          setCreateError(null);
-          if (value) onChange(null);
-        }}
-        onClick={() => setOpen(true)}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" && e.key !== "Tab") return;
-          const exact = customers.find((c) => c.name.toLowerCase() === q);
-          const match = exact || filtered[0];
-          if (match) {
-            // Tab só completa (e continua pro próximo campo, comportamento
-            // normal de tab); Enter também cria o cliente se não achar nada.
-            if (e.key === "Enter") e.preventDefault();
-            selectCustomer(match);
-          } else if (e.key === "Enter" && q) {
-            e.preventDefault();
-            handleCreate();
-          }
-        }}
-        onBlur={() => {
-          setTimeout(() => {
-            setOpen(false);
-            if (!value) {
-              const exact = customers.find((c) => c.name.toLowerCase() === q);
-              if (exact) selectCustomer(exact);
-            }
-          }, 150);
-        }}
-        className="input"
-        placeholder="Buscar ou criar cliente..."
-        autoFocus={autoFocus}
-      />
-      {open && (
-        <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 shadow-lg">
-          {filtered.length === 0 && !q && (
-            <p className="px-3 py-1.5 text-xs text-zinc-500">Nenhum cliente cadastrado ainda.</p>
-          )}
-          {filtered.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => selectCustomer(c)}
-              className="block w-full px-3 py-1.5 text-left text-sm text-zinc-200 hover:bg-zinc-800"
-            >
-              {c.name}
-            </button>
-          ))}
-          {q && !exactMatch && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={handleCreate}
-              disabled={creating}
-              className="block w-full border-t border-zinc-800 px-3 py-1.5 text-left text-sm text-emerald-400 hover:bg-zinc-800 disabled:opacity-60"
-            >
-              {creating ? "Criando..." : `+ Criar cliente "${query.trim()}"`}
-            </button>
-          )}
-        </div>
       )}
-      </div>
       {createError && <p className="mt-1 text-xs text-red-400">{createError}</p>}
     </div>
   );
