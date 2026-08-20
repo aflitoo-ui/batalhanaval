@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { run } from "@/db/pool";
+import { get, run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { productSchema } from "@/lib/schemas";
@@ -18,6 +18,16 @@ export const PATCH = withApiErrors(
     const parsed = productSchema.partial().safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message || "Dados inválidos." }, { status: 400 });
+    }
+
+    if (parsed.data.name !== undefined) {
+      const existing = await get(
+        `SELECT id FROM products WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND id != $3`,
+        [user.id, parsed.data.name, id]
+      );
+      if (existing) {
+        return NextResponse.json({ error: "Já existe um produto com esse nome." }, { status: 409 });
+      }
     }
 
     const fields: string[] = [];

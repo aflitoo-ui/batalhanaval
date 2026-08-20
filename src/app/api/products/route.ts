@@ -45,7 +45,10 @@ export const POST = withApiErrors("products.POST", async (req: NextRequest) => {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Dados inválidos." }, { status: 400 });
   }
 
-  const existing = await get(`SELECT id FROM products WHERE user_id = $1 AND name = $2`, [user.id, parsed.data.name]);
+  const existing = await get(`SELECT id FROM products WHERE user_id = $1 AND LOWER(name) = LOWER($2)`, [
+    user.id,
+    parsed.data.name,
+  ]);
   if (existing) {
     return NextResponse.json({ error: "Já existe um produto com esse nome." }, { status: 409 });
   }
