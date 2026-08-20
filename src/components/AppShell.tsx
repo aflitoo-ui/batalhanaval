@@ -159,12 +159,8 @@ export default function AppShell({
       <header className="border-b border-zinc-800">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Link
-                href="/"
-                aria-label="Início"
-                className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
-              >
+            <Link href="/" aria-label="Início" className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200">
                 <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path
                     d="M4 11.5 12 4l8 7.5M6 10v9a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-9"
@@ -172,9 +168,9 @@ export default function AppShell({
                     strokeLinejoin="round"
                   />
                 </svg>
-              </Link>
-              <span className="text-lg font-bold tracking-tight text-[#946ce0]">STRIX</span>
-            </div>
+              </span>
+              <span className="text-lg font-bold tracking-tight text-[#946ce0] transition hover:text-[#a883e8]">STRIX</span>
+            </Link>
             <nav className="hidden items-center gap-1 md:flex">
               {businessNav.map((item) => (
                 <Link
