@@ -1227,6 +1227,18 @@ function NewSaleModal({
     }
   }
 
+  // Prévia ao vivo (igual ao mobile) — dá pra ver o resultado antes de
+  // salvar, em vez de só descobrir depois de confirmar.
+  const qtyPreview = Number(quantity.replace(",", ".")) || 0;
+  const sellPreview = Number(sellPrice.replace(",", ".")) || 0;
+  const buyPreview = Number(buyPrice.replace(",", ".")) || 0;
+  const adjAbsPreview = adjustment ? Number(adjustment.replace(",", ".")) || 0 : 0;
+  const adjPreview = adjustmentNegative ? -adjAbsPreview : adjAbsPreview;
+  const totalPreview = qtyPreview * sellPreview + adjPreview;
+  const profitPreview = totalPreview - qtyPreview * buyPreview;
+  const paidPreview = initialPayment ? Number(initialPayment.replace(",", ".")) || 0 : 0;
+  const owedPreview = totalPreview - paidPreview;
+
   // Se o modal abrir antes da lista de produtos terminar de carregar (ex:
   // clique rápido logo após um refresh), productId/preços ficam vazios pois
   // só são inicializados uma vez, no mount. Assim que a lista chegar, se o
@@ -1298,6 +1310,13 @@ function NewSaleModal({
   return (
     <ModalShell title="Nova venda" onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-3">
+        <ProductPicker products={products} value={productId || null} onChange={handleProductChange} />
+        <CustomerPicker
+          customers={customers}
+          value={customer}
+          onChange={setCustomer}
+          onCustomerCreated={onCustomerCreated}
+        />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Data">
             <input
@@ -1308,28 +1327,6 @@ function NewSaleModal({
               className="input"
             />
           </Field>
-          <Field label="Produto">
-            <select
-              value={productId}
-              onChange={(e) => handleProductChange(Number(e.target.value))}
-              className="input"
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <CustomerPicker
-          customers={customers}
-          value={customer}
-          onChange={setCustomer}
-          onCustomerCreated={onCustomerCreated}
-          autoFocus
-        />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="Quantidade">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
           </Field>
@@ -1340,34 +1337,36 @@ function NewSaleModal({
             <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
-        <Field label="Valor pago no ato (deixe em branco se for tudo fiado)">
-          <input
-            value={initialPayment}
-            onChange={(e) => setInitialPayment(e.target.value)}
-            className="input"
-            placeholder="0,00"
-            inputMode="decimal"
-          />
-        </Field>
-        <Field
-          label={
-            <>
-              Ajuste no total (opcional)
-              <InfoTip text={ADJUSTMENT_HINT} />
-            </>
-          }
-        >
-          <div className="flex gap-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field
+            label={
+              <>
+                Ajuste no total (opcional)
+                <InfoTip text={ADJUSTMENT_HINT} />
+              </>
+            }
+          >
+            <div className="flex gap-2">
+              <input
+                value={adjustment}
+                onChange={(e) => setAdjustment(e.target.value.replace(/-/g, ""))}
+                className="input flex-1"
+                placeholder="0,00"
+                inputMode="decimal"
+              />
+              <AdjustmentSignToggle negative={adjustmentNegative} onToggle={() => setAdjustmentNegative((v) => !v)} />
+            </div>
+          </Field>
+          <Field label="Pagou agora (em branco se for tudo fiado)">
             <input
-              value={adjustment}
-              onChange={(e) => setAdjustment(e.target.value.replace(/-/g, ""))}
-              className="input flex-1"
+              value={initialPayment}
+              onChange={(e) => setInitialPayment(e.target.value)}
+              className="input"
               placeholder="0,00"
               inputMode="decimal"
             />
-            <AdjustmentSignToggle negative={adjustmentNegative} onToggle={() => setAdjustmentNegative((v) => !v)} />
-          </div>
-        </Field>
+          </Field>
+        </div>
         <Field label="Observação (opcional)">
           <textarea
             value={notes}
@@ -1376,6 +1375,26 @@ function NewSaleModal({
             placeholder="Alguma anotação sobre essa venda..."
           />
         </Field>
+
+        <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-zinc-500">Total</span>
+            <span className="font-semibold text-zinc-100">{formatBRL(totalPreview)}</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-zinc-500">Lucro</span>
+            <span className={`font-semibold ${profitPreview >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+              {formatBRL(profitPreview)}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-zinc-500">{owedPreview > 0.001 ? "Fica devendo" : "Situação"}</span>
+            <span className={`font-semibold ${owedPreview > 0.001 ? "text-red-400" : "text-emerald-400"}`}>
+              {owedPreview > 0.001 ? formatBRL(owedPreview) : "Quitado"}
+            </span>
+          </div>
+        </div>
+
         {error && <p className="text-sm text-red-400">{error}</p>}
         <button
           type="submit"
@@ -1386,6 +1405,51 @@ function NewSaleModal({
         </button>
       </form>
     </ModalShell>
+  );
+}
+
+// Busca + chips, igual ao seletor de produto do mobile — mais rápido de
+// tocar do que abrir um <select> nativo, principalmente no web-app.
+function ProductPicker({
+  products,
+  value,
+  onChange,
+}: {
+  products: Product[];
+  value: number | null;
+  onChange: (id: number) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const visible = q ? products.filter((p) => p.name.toLowerCase().includes(q)) : products;
+
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-medium text-zinc-400">Produto</span>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="input mb-2"
+        placeholder="Buscar produto..."
+      />
+      <div className="flex flex-wrap gap-2">
+        {visible.length === 0 && <p className="text-xs text-zinc-500">Nenhum produto encontrado.</p>}
+        {visible.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onChange(p.id)}
+            className={`rounded-full border px-3 py-1 text-sm font-medium transition ${
+              value === p.id
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            }`}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
