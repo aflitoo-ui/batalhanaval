@@ -29,6 +29,16 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
+/* Sem isso, o iOS Safari (inclusive no PWA instalado) espera ~300ms antes de
+   confirmar um toque em botão/link, pra checar se vai virar duplo-toque de
+   zoom — dá a sensação de resposta atrasada em qualquer clique, mais notável
+   em ações que fecham algo (ex: X do modal). touch-action: manipulation tira
+   só essa detecção de duplo-toque, sem desligar o pinça-pra-zoom da página. */
+button,
+a {
+  touch-action: manipulation;
+}
+
 /* O ícone padrão do input de data é escuro e quase some no fundo escuro do
    app — inverte a cor pra ficar visível, e deixa o campo inteiro clicável
    (não só o ícone). */
