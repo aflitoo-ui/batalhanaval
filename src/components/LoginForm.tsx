@@ -49,7 +49,8 @@ export function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-950 px-4">
       <div className="w-full max-w-sm">
-        <h1 className="mb-8 text-center text-2xl font-bold tracking-tight text-[#946ce0]">STRIX</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/strix-wordmark.png" alt="STRIX" className="mx-auto mb-8 h-8 w-auto" />
         <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-6">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-300">Login</label>
