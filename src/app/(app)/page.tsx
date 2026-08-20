@@ -1220,6 +1220,18 @@ function NewSaleModal({
   const [saving, setSaving] = useState(false);
   const isStandalone = useStandalone();
 
+  // A tela cheia do web-app não passa pelo ModalShell (que já trava o
+  // scroll do body) — sem isso aqui, o fundo balança e a tela toda parece
+  // "solta" ao arrastar, mesmo com touch-none no container em si.
+  useEffect(() => {
+    if (!isStandalone) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [isStandalone]);
+
   function handleProductChange(id: number) {
     setProductId(id);
     const p = products.find((x) => x.id === id);
@@ -1419,7 +1431,10 @@ function NewSaleModal({
   // cabeçalho "← Vendas" no lugar do X. No navegador normal continua modal.
   if (isStandalone) {
     return (
-      <div className="fixed inset-x-0 top-0 z-50 flex flex-col overscroll-contain bg-zinc-950 pt-[env(safe-area-inset-top)]" style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}>
+      <div
+        className="fixed inset-x-0 top-0 z-50 flex touch-none flex-col overscroll-contain bg-zinc-950 pt-[env(safe-area-inset-top)]"
+        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
+      >
         <div className="flex shrink-0 items-center gap-3 border-b border-zinc-800 p-4">
           <button
             onClick={onClose}
@@ -1432,7 +1447,7 @@ function NewSaleModal({
           </button>
           <h2 className="text-base font-bold text-zinc-100">Nova venda</h2>
         </div>
-        <div className="flex-1 overflow-y-auto p-4">{formBody}</div>
+        <div className="touch-auto flex-1 overflow-y-auto overscroll-contain p-4">{formBody}</div>
       </div>
     );
   }
