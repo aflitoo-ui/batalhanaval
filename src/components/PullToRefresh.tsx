@@ -99,7 +99,7 @@ export default function PullToRefresh({ children }: { children: React.ReactNode 
         style={{ height: pull, transition: dragging ? "none" : "height 0.2s ease-out" }}
       >
         <div
-          className="mt-3 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#946ce0]"
+          className="mt-3 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#8148e9]"
           style={{
             opacity: Math.min(1, pull / THRESHOLD),
             transform: refreshing ? undefined : `rotate(${pull * 3}deg)`,

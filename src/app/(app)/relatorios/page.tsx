@@ -333,7 +333,7 @@ export default function RelatoriosPage() {
         {allTime ? (
           <button
             onClick={() => setAllTime(false)}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-[#946ce0] transition hover:bg-zinc-900"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium text-[#8148e9] transition hover:bg-zinc-900"
           >
             📅 Ver por mês
           </button>

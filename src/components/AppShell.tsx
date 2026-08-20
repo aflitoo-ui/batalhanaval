@@ -303,7 +303,7 @@ export default function AppShell({
                 key={item.href}
                 href={item.href}
                 className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                  active ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+                  active ? "text-[#8148e9]" : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 <TabIcon name={item.href} />
@@ -317,7 +317,7 @@ export default function AppShell({
             <button
               onClick={() => setMenuOpen((v) => !v)}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                menuOpen ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+                menuOpen ? "text-[#8148e9]" : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               <TabIcon name="admin" />
@@ -329,7 +329,7 @@ export default function AppShell({
             <Link
               href="/assinatura"
               className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition ${
-                pathname === "/assinatura" ? "text-[#946ce0]" : "text-zinc-500 hover:text-zinc-300"
+                pathname === "/assinatura" ? "text-[#8148e9]" : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               <TabIcon name="account" />

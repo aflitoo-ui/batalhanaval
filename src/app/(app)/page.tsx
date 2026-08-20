@@ -235,7 +235,7 @@ function VendasPageInner() {
         {!isStandalone && (
           <button
             onClick={() => setShowNewSale(true)}
-            className="rounded-md bg-[#946ce0] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#a883e8]"
+            className="rounded-md bg-[#8148e9] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#a176ef]"
           >
             + Nova venda
           </button>
@@ -543,7 +543,7 @@ function VendasPageInner() {
         <button
           onClick={() => setShowNewSale(true)}
           aria-label="Nova venda"
-          className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#946ce0] text-white shadow-lg shadow-black/40 transition hover:bg-[#a883e8]"
+          className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#8148e9] text-white shadow-lg shadow-black/40 transition hover:bg-[#a176ef]"
           style={{ bottom: "calc(64px + env(safe-area-inset-bottom) + 16px)" }}
         >
           <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={2.5}>
@@ -906,14 +906,14 @@ function SaleModal({
             <button
               type="button"
               onClick={() => setAmount(String(Math.round(sale.owed * 100) / 100))}
-              className="rounded-lg bg-[#946ce0] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a883e8]"
+              className="rounded-lg bg-[#8148e9] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#a176ef]"
             >
               Quitar tudo
             </button>
             <button
               type="submit"
               disabled={savingPayment}
-              className="flex-1 rounded-lg bg-[#946ce0] py-2 text-sm font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
+              className="flex-1 rounded-lg bg-[#8148e9] py-2 text-sm font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
             >
               {savingPayment ? "Salvando..." : "Registrar pagamento"}
             </button>
@@ -1026,7 +1026,7 @@ function SaleModal({
         ) : (
           <button
             type="submit"
-            className="w-full rounded-lg bg-[#946ce0] py-2 text-sm font-medium text-white transition hover:bg-[#a883e8]"
+            className="w-full rounded-lg bg-[#8148e9] py-2 text-sm font-medium text-white transition hover:bg-[#a176ef]"
           >
             Salvar alterações
           </button>
@@ -1412,7 +1412,7 @@ function NewSaleModal({
         <button
           type="submit"
           disabled={saving}
-          className="w-full rounded-lg bg-[#946ce0] py-2 text-sm font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
+          className="w-full rounded-lg bg-[#8148e9] py-2 text-sm font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
         >
           {saving ? "Salvando..." : "Salvar venda"}
         </button>
@@ -1536,7 +1536,7 @@ function CustomerPicker({
           type="button"
           onClick={handleCreateButtonClick}
           disabled={creating}
-          className="rounded-md bg-[#946ce0] px-2 py-0.5 text-xs font-medium text-white transition hover:bg-[#a883e8] disabled:opacity-60"
+          className="rounded-md bg-[#8148e9] px-2 py-0.5 text-xs font-medium text-white transition hover:bg-[#a176ef] disabled:opacity-60"
         >
           {creating ? "Criando..." : "+ Criar cliente"}
         </button>
