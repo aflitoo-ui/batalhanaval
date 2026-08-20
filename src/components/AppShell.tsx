@@ -218,6 +218,21 @@ export default function AppShell({
               Sair
             </button>
           </div>
+          {isStandalone && (
+            <button
+              onClick={handleLogout}
+              aria-label="Sair"
+              className="flex h-[30px] w-[30px] items-center justify-center rounded-full bg-zinc-900 text-red-400 transition hover:bg-zinc-800"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path
+                  d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M16 17l5-5-5-5M21 12H9"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => setMenuOpen((v) => !v)}
             aria-label="Abrir menu"
