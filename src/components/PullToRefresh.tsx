@@ -8,9 +8,13 @@ const THRESHOLD = 65;
 // Sobe a árvore a partir do toque original: se ele começou dentro de um
 // painel com scroll próprio (ex.: lista de inativos em Clientes) que ainda
 // não está no topo dele mesmo, o gesto pertence a esse painel, não à página.
+// Um toque dentro de qualquer modal (ModalShell, popup do Telegram) é sempre
+// excluído, mesmo com o painel no topo — puxar pra baixo ali nunca deveria
+// recarregar a página inteira por trás, só rolar o próprio modal (ou nada).
 function startedInsideScrolledPanel(target: EventTarget | null) {
   let el = target instanceof Element ? target : null;
   while (el && el !== document.body) {
+    if (el.getAttribute("role") === "dialog") return true;
     if (el.scrollHeight > el.clientHeight) {
       const style = getComputedStyle(el);
       if ((style.overflowY === "auto" || style.overflowY === "scroll") && el.scrollTop > 0) {

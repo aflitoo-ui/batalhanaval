@@ -81,6 +81,8 @@ export default function TelegramLinkPopup() {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && dismiss()}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
     >
