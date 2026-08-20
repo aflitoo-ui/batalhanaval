@@ -43,7 +43,7 @@ export function ConvitesAdminClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-zinc-100">Convites</h1>
+        <h1 className="text-xl font-bold text-zinc-100">Apadrinhamento</h1>
         <p className="mt-1 text-sm text-zinc-500">Quem convidou quem — últimos {rows.length} cadastros via convite.</p>
       </div>
 
