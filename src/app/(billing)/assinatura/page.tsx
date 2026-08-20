@@ -116,8 +116,7 @@ export default function AssinaturaPage() {
   }
 
   function handleCopyInvite(code: string) {
-    const url = `${window.location.origin}/cadastro?c=${code}`;
-    navigator.clipboard.writeText(url).then(() => {
+    navigator.clipboard.writeText(code).then(() => {
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2000);
     });
@@ -463,17 +462,16 @@ export default function AssinaturaPage() {
           </p>
 
           {inviteStatus.invites.map((inv) => (
-            <div key={inv.code} className="mt-3 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-2">
-              <code className="flex-1 truncate text-xs text-zinc-400">
-                {typeof window !== "undefined" ? window.location.origin : ""}/cadastro?c={inv.code}
-              </code>
-              <button
-                onClick={() => handleCopyInvite(inv.code)}
-                className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 transition hover:bg-zinc-700"
-              >
+            <button
+              key={inv.code}
+              onClick={() => handleCopyInvite(inv.code)}
+              className="mt-3 flex w-full items-center justify-between gap-2 rounded-lg border border-zinc-800 bg-zinc-950 p-2 text-left transition hover:bg-zinc-900"
+            >
+              <code className="flex-1 truncate text-sm text-zinc-200">{inv.code}</code>
+              <span className="shrink-0 rounded-md bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200">
                 {copiedCode === inv.code ? "Copiado!" : "Copiar"}
-              </button>
-            </div>
+              </span>
+            </button>
           ))}
 
           {inviteStatus.credits > 0 && (
@@ -482,7 +480,7 @@ export default function AssinaturaPage() {
               disabled={generatingInvite}
               className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
             >
-              {generatingInvite ? "Gerando..." : "Gerar link de convite"}
+              {generatingInvite ? "Gerando..." : "Gerar código de convite"}
             </button>
           )}
           {inviteError && <p className="mt-2 text-xs text-red-400">{inviteError}</p>}

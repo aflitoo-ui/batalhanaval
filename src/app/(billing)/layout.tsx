@@ -6,5 +6,5 @@ import { getSessionUser } from "@/lib/auth";
 export default async function BillingLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  return <div className="min-h-screen bg-zinc-950 text-zinc-100">{children}</div>;
+  return <div className="min-h-screen bg-zinc-950 pt-[env(safe-area-inset-top)] text-zinc-100">{children}</div>;
 }
