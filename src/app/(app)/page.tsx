@@ -1590,6 +1590,15 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
   const [viewYear, setViewYear] = useState(selected.getFullYear());
   const [viewMonth, setViewMonth] = useState(selected.getMonth());
 
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   function openPicker() {
     const d = isoToLocalDate(value);
     setViewYear(d.getFullYear());
@@ -1626,13 +1635,32 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
         {formatDisplayDate(selected)}
       </button>
       {open && (
-        <div className="fixed inset-0 z-[60] flex touch-none items-center justify-center overscroll-contain bg-black/60 px-4">
+        <div
+          className="fixed inset-0 z-[60] flex touch-none items-center justify-center overscroll-contain bg-black/60 px-4"
+          onClick={() => setOpen(false)}
+          onTouchEnd={(e) => {
+            // touch-action: none no fundo trava o gesto de arrastar/puxar por
+            // trás, mas por spec também suprime o "click" sintetizado que o
+            // navegador geraria depois de um toque — sem isso aqui, tocar
+            // fora do calendário num celular de verdade não fecha nada.
+            e.preventDefault();
+            setOpen(false);
+          }}
+        >
           <div
             role="dialog"
             aria-modal="true"
-            className="w-full max-w-[280px] touch-auto rounded-xl border border-zinc-800 bg-zinc-900 p-4"
+            className="relative w-full max-w-[280px] touch-auto rounded-xl border border-zinc-800 bg-zinc-900 p-4"
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Fechar"
+              className="absolute right-2 top-2 rounded-full p-1.5 text-base leading-none text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-100"
+            >
+              ✕
+            </button>
             <div className="mb-3 flex items-center justify-between">
               <button
                 type="button"
