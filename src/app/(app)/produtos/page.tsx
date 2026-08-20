@@ -142,7 +142,7 @@ export default function ProdutosPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-zinc-400">Preço de compra</label>
+          <label className="mb-1 block text-xs font-medium text-zinc-400">Preço de custo</label>
           <input
             value={buyPrice}
             onChange={(e) => setBuyPrice(e.target.value)}
@@ -198,7 +198,7 @@ export default function ProdutosPage() {
                         onChange={(e) => setEditBuyPrice(e.target.value)}
                         className="input"
                         inputMode="decimal"
-                        placeholder="Compra"
+                        placeholder="Custo"
                       />
                       <input
                         value={editSellPrice}
@@ -239,7 +239,7 @@ export default function ProdutosPage() {
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <p className="text-[11px] text-zinc-500">Compra</p>
+                        <p className="text-[11px] text-zinc-500">Custo</p>
                         <p className="text-zinc-300">{formatBRL(p.defaultBuyPrice)}</p>
                       </div>
                       <div>
@@ -299,7 +299,7 @@ export default function ProdutosPage() {
           <thead>
             <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
               <th className="px-4 py-2">Produto</th>
-              <th className="px-4 py-2">Compra</th>
+              <th className="px-4 py-2">Custo</th>
               <th className="px-4 py-2">Venda</th>
               <th className="px-4 py-2">Status</th>
               <th className="px-4 py-2"></th>
