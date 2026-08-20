@@ -133,6 +133,7 @@ export default function AppShell({
       ? [
           { href: "/usuarios", label: "Usuários" },
           { href: "/admin/assinaturas", label: "Assinaturas" },
+          { href: "/admin/convites", label: "Convites" },
           { href: "/admin/log", label: "Log" },
         ]
       : [];
