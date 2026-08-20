@@ -3,7 +3,7 @@ import { get, withTransaction } from "@/db/pool";
 import { withApiErrors } from "@/lib/api-errors";
 import { getPaymentProvider } from "@/lib/payments";
 import { sendTelegramAlert } from "@/lib/telegram";
-import { grantInviteCreditOnce } from "@/lib/invites";
+import { grantInviteCreditForPayment } from "@/lib/invites";
 
 // Endpoint chamado pelo Asaas, nunca pelo navegador do usuário — a
 // autenticação é o token de webhook (verifyWebhookSignature), não sessão.
@@ -61,7 +61,8 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
            VALUES ($1, $2, $3, 'approved', $4)`,
           [sub.id, event.providerPaymentId, event.amount, event.paidAt]
         );
-        await grantInviteCreditOnce(tx, sub.userId);
+        // 1 convite a cada mensalidade paga (não só na primeira vez).
+        await grantInviteCreditForPayment(tx, sub.userId);
         break;
       }
       case "payment_failed":
