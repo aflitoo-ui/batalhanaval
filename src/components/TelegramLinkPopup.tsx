@@ -106,7 +106,7 @@ export default function TelegramLinkPopup() {
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => setWaitingLink(true)}
-          className="mt-4 block w-full rounded-lg bg-[#533094] py-2 text-center font-medium text-white transition hover:bg-[#7e64af]"
+          className="mt-4 block w-full rounded-lg bg-[#3a2268] py-2 text-center font-medium text-white transition hover:bg-[#6139ae]"
         >
           Vincular Telegram
         </a>

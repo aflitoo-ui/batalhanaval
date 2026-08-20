@@ -214,7 +214,7 @@ export default function ClientesPage() {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-[#533094] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#7e64af] disabled:opacity-60"
+          className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae] disabled:opacity-60"
         >
           Adicionar cliente
         </button>

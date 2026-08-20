@@ -63,7 +63,7 @@ export function LoginForm() {
                 autoComplete="off"
                 value={email}
                 onChange={(e) => setEmail(sanitizeLogin(e.target.value))}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#533094]"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#3a2268]"
               />
               {email && (
                 <button
@@ -90,7 +90,7 @@ export function LoginForm() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#533094]"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 pr-9 text-zinc-100 outline-none focus:border-[#3a2268]"
               />
               <button
                 type="button"
@@ -107,7 +107,7 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-[#533094] py-2 font-medium text-white transition hover:bg-[#7e64af] disabled:opacity-60"
+            className="w-full rounded-lg bg-[#3a2268] py-2 font-medium text-white transition hover:bg-[#6139ae] disabled:opacity-60"
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
