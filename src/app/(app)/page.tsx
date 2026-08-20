@@ -247,9 +247,11 @@ function VendasPageInner() {
           onClick={() => goToMonth(-1)}
           disabled={!monthFilterActive}
           aria-label="Mês anterior"
-          className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none"
+          className="rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none"
         >
-          ◀
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
         <span className="w-36 text-center text-sm font-medium text-zinc-200">
           {monthFilterActive ? `${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}` : "Todas as datas"}
@@ -258,9 +260,11 @@ function VendasPageInner() {
           onClick={() => goToMonth(1)}
           disabled={!monthFilterActive || isCurrentMonth}
           aria-label="Próximo mês"
-          className="rounded-md px-2 py-1 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
+          className="rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200 disabled:pointer-events-none disabled:opacity-30"
         >
-          ▶
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
       </div>
 
@@ -1324,7 +1328,7 @@ function NewSaleModal({
           onChange={setCustomer}
           onCustomerCreated={onCustomerCreated}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[2fr_1fr] gap-3">
           <Field label="Data">
             <input
               type="date"
@@ -1337,6 +1341,8 @@ function NewSaleModal({
           <Field label="Quantidade">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
           </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Preço de custo">
             <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
           </Field>
