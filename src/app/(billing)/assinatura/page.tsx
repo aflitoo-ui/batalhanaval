@@ -490,7 +490,7 @@ export default function AssinaturaPage() {
         </div>
       )}
 
-      {inviteStatus && (inviteStatus.credits > 0 || inviteStatus.invites.length > 0) && (
+      {inviteStatus && (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
           <h2 className="mb-1 text-sm font-semibold text-zinc-200">Convide um amigo</h2>
           <p className="text-sm text-zinc-400">
