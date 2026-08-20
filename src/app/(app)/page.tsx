@@ -1218,19 +1218,6 @@ function NewSaleModal({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const isStandalone = useStandalone();
-
-  // A tela cheia do web-app não passa pelo ModalShell (que já trava o
-  // scroll do body) — sem isso aqui, o fundo balança e a tela toda parece
-  // "solta" ao arrastar, mesmo com touch-none no container em si.
-  useEffect(() => {
-    if (!isStandalone) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [isStandalone]);
 
   function handleProductChange(id: number) {
     setProductId(id);
@@ -1425,34 +1412,6 @@ function NewSaleModal({
         </button>
       </form>
   );
-
-  // No web-app instalado, "Nova venda" abre como tela cheia (igual ao
-  // mobile — tela própria, não modal flutuando no meio da tela), com um
-  // cabeçalho "← Vendas" no lugar do X. No navegador normal continua modal.
-  if (isStandalone) {
-    return (
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="fixed inset-x-0 top-0 z-50 flex touch-none flex-col overscroll-contain bg-zinc-950 pt-[env(safe-area-inset-top)]"
-        style={{ bottom: "calc(64px + env(safe-area-inset-bottom))" }}
-      >
-        <div className="flex shrink-0 items-center gap-3 border-b border-zinc-800 p-4">
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5}>
-              <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Vendas
-          </button>
-          <h2 className="text-base font-bold text-zinc-100">Nova venda</h2>
-        </div>
-        <div className="touch-pan-y flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4">{formBody}</div>
-      </div>
-    );
-  }
 
   return <ModalShell title="Nova venda" onClose={onClose}>{formBody}</ModalShell>;
 }
