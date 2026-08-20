@@ -1347,7 +1347,7 @@ function NewSaleModal({
           onCustomerCreated={onCustomerCreated}
           usage={customerUsage}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[53fr_47fr] gap-3">
           <Field label="Data">
             <input
               type="date"
@@ -1357,7 +1357,7 @@ function NewSaleModal({
               className="input overflow-hidden text-ellipsis whitespace-nowrap"
             />
           </Field>
-          <Field label="Quantidade">
+          <Field label="Quantidade" labelClassName="pl-[3%]">
             <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
           </Field>
         </div>
@@ -1608,10 +1608,20 @@ function CustomerPicker({
   );
 }
 
-function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  labelClassName,
+}: {
+  label: React.ReactNode;
+  children: React.ReactNode;
+  labelClassName?: string;
+}) {
   return (
     <label className="block">
-      <span className="mb-1 flex items-center gap-1 text-xs font-medium text-zinc-400">{label}</span>
+      <span className={`mb-1 flex items-center gap-1 text-xs font-medium text-zinc-400 ${labelClassName ?? ""}`}>
+        {label}
+      </span>
       {children}
     </label>
   );
