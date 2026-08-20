@@ -123,6 +123,11 @@ export default function AppShell({
     return () => clearTimeout(t);
   }, [daysLeft]);
   const businessNav = user.role === "admin" ? NAV : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
+  // No web-app instalado, Vendas/Produtos/Clientes/Relatórios já são as
+  // abas da barra de baixo — repeti-las aqui dentro do menu "Conta" é
+  // redundante, então só sobra o que não está lá (ex: Minha assinatura).
+  // No navegador normal (sem barra de baixo) o menu continua completo.
+  const menuPanelNav = isStandalone ? businessNav.filter((item) => !NAV.some((n) => n.href === item.href)) : businessNav;
   const adminNav =
     user.role === "admin"
       ? [
@@ -232,7 +237,7 @@ export default function AppShell({
         {menuOpen && (
           <div className="border-t border-zinc-800 px-4 py-3 md:hidden">
             <nav className="flex flex-col gap-1">
-              {businessNav.map((item) => (
+              {menuPanelNav.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
