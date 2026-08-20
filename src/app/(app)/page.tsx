@@ -1652,6 +1652,7 @@ function DateField({ value, onChange }: { value: string; onChange: (iso: string)
             aria-modal="true"
             className="relative w-full max-w-[280px] touch-auto rounded-xl border border-zinc-800 bg-zinc-900 p-4"
             onClick={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
           >
             <button
               type="button"

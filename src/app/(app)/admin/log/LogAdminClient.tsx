@@ -41,30 +41,52 @@ function formatDateTime(iso: string) {
 export function LogAdminClient() {
   const [rows, setRows] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [search, setSearch] = useState("");
 
+  // Busca reseta a paginação — troca de página não faz sentido no meio de
+  // uma busca nova, sempre recomeça do zero.
   useEffect(() => {
-    void (async () => {
-      const res = await fetch("/api/admin/log");
+    setLoading(true);
+    const t = setTimeout(async () => {
+      const res = await fetch(`/api/admin/log?q=${encodeURIComponent(search.trim())}`);
       const data = await res.json().catch(() => null);
       setRows(data?.log || []);
+      setHasMore(!!data?.hasMore);
       setLoading(false);
-    })();
-  }, []);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
 
-  if (loading) return <p className="text-sm text-zinc-500">Carregando...</p>;
+  async function loadMore() {
+    setLoadingMore(true);
+    const res = await fetch(`/api/admin/log?q=${encodeURIComponent(search.trim())}&offset=${rows.length}`);
+    const data = await res.json().catch(() => null);
+    setRows((prev) => [...prev, ...(data?.log || [])]);
+    setHasMore(!!data?.hasMore);
+    setLoadingMore(false);
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-zinc-100">Log de ações</h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Últimas {rows.length} ações administrativas (liberar/revogar acesso, criar/excluir usuário, etc.).
-        </p>
+        <p className="mt-1 text-sm text-zinc-500">Ações administrativas (liberar/revogar acesso, criar/excluir usuário, etc.).</p>
       </div>
 
-      {rows.length === 0 ? (
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar por login, ação ou detalhe..."
+        className="input max-w-xs"
+      />
+
+      {loading ? (
+        <p className="text-sm text-zinc-500">Carregando...</p>
+      ) : rows.length === 0 ? (
         <p className="rounded-lg border border-zinc-800 bg-zinc-900 px-4 py-6 text-center text-sm text-zinc-500">
-          Nenhuma ação registrada ainda.
+          {search ? "Nenhuma ação encontrada para essa busca." : "Nenhuma ação registrada ainda."}
         </p>
       ) : (
         <>
@@ -122,6 +144,16 @@ export function LogAdminClient() {
               </tbody>
             </table>
           </div>
+
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 disabled:opacity-60"
+            >
+              {loadingMore ? "Carregando..." : "Carregar mais"}
+            </button>
+          )}
         </>
       )}
     </div>
