@@ -668,7 +668,14 @@ export function UsuariosClient() {
             {filteredUsers.map((u) => (
               <div key={u.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="truncate font-medium text-zinc-200">{u.email}</p>
+                  <p className="truncate font-medium text-zinc-200">
+                    {u.email}
+                    {u.telegramLinked && (
+                      <span className="ml-1.5 text-xs" title="Telegram vinculado">
+                        ✅
+                      </span>
+                    )}
+                  </p>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                       u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
@@ -716,7 +723,14 @@ export function UsuariosClient() {
               <tbody>
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="border-b border-zinc-900 last:border-0">
-                    <td className="truncate px-4 py-2 font-medium text-zinc-200">{u.email}</td>
+                    <td className="truncate px-4 py-2 font-medium text-zinc-200">
+                      {u.email}
+                      {u.telegramLinked && (
+                        <span className="ml-1.5 text-xs" title="Telegram vinculado">
+                          ✅
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-zinc-300">{u.role === "admin" ? "Admin" : "Usuário"}</td>
                     <td className="px-4 py-2">
                       <span
