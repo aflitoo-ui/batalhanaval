@@ -5,6 +5,7 @@ import { withApiErrors } from "@/lib/api-errors";
 import { signupSchema } from "@/lib/schemas";
 import { isRateLimited, recordRateLimitFailure } from "@/lib/rate-limit";
 import { logAdminAction } from "@/lib/adminLog";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 const RATE_LIMIT_OPTS = { max: 10, windowMs: 15 * 60 * 1000 };
 
@@ -84,6 +85,17 @@ export const POST = withApiErrors("auth.signup.POST", async (req: NextRequest) =
   // Aponta o padrinho (quem gerou o convite) pro afilhado (a conta nova) —
   // dá pra ver essa linha inteira no Log de ações do admin.
   await logAdminAction({ adminId: createdBy, action: "signup_via_invite", targetUserId: userId });
+
+  // Alerta temporário pedido pelo usuário pra acompanhar de perto as
+  // primeiras contas criadas via apadrinhamento — best-effort, nunca atrasa
+  // nem derruba o cadastro. Só em produção, senão vira ruído a cada teste
+  // local. Tirar quando não precisar mais desse controle manual.
+  if (process.env.NODE_ENV === "production") {
+    const sponsor = await get<{ email: string }>(`SELECT email FROM users WHERE id = $1`, [createdBy]);
+    void sendTelegramAlert(
+      `👤 Nova conta via convite: ${parsed.data.email} (apadrinhada por ${sponsor?.email ?? `#${createdBy}`})`
+    );
+  }
 
   await createSessionCookie(userId);
   return NextResponse.json({ ok: true }, { status: 201 });

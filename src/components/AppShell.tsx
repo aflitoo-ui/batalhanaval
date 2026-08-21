@@ -169,7 +169,10 @@ export default function AppShell({
   // Admin não tem vendas/produtos/clientes/relatórios próprios — mostrar
   // essas abas só ocupava espaço à toa. Pro admin, a área administrativa
   // (Usuários/Assinaturas/Apadrinhamento/Log) já é a navegação principal.
-  const businessNav = user.role === "admin" ? [] : [...NAV, { href: "/assinatura", label: "Minha assinatura" }];
+  const businessNav =
+    user.role === "admin"
+      ? []
+      : [...NAV, { href: "/assinatura", label: "Minha assinatura" }, { href: "/sobre", label: "Sobre" }];
   // No web-app instalado, Vendas/Produtos/Clientes/Relatórios já são as
   // abas da barra de baixo — repeti-las aqui dentro do menu "Conta" é
   // redundante, então só sobra o que não está lá (ex: Minha assinatura).
