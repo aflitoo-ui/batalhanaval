@@ -340,7 +340,12 @@ export default function AppShell({
         <nav
           role="navigation"
           aria-label="Navegação principal"
-          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+          // [transform:translateZ(0)]+will-change força essa barra pra sua
+          // própria camada de composição — sem isso, em páginas muito longas
+          // (muitas vendas), o navegador às vezes "perde" o fixed durante o
+          // scroll e ela aparece grudada no meio do conteúdo por um
+          // instante em vez de ficar presa embaixo da tela.
+          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur [transform:translateZ(0)] [will-change:transform] md:hidden"
         >
           {user.role === "admin"
             ? // Admin não usa Vendas/Produtos/Clientes/Relatórios — a barra
