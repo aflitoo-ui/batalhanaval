@@ -54,7 +54,7 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
         [String(chatId), code]
       );
       if (!user) return null;
-      if (user.telegramBonusGrantedAt) return { bonusApplied: false };
+      if (user.telegramBonusGrantedAt) return { result: "already_used" as const };
 
       const sub = await tx.get<{
         id: number;
@@ -66,10 +66,20 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
          FROM subscriptions WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
         [user.id]
       );
-      if (!sub) return { bonusApplied: false };
+      if (!sub) return { result: "already_used" as const };
       await tx.get(`UPDATE users SET telegram_bonus_granted_at = now() WHERE id = $1`, [user.id]);
 
-      if (sub.status === "trialing" || sub.status === "granted") {
+      // Conta liberada pelo admin (com ou sem prazo) não mexe em dias — só
+      // "trialing" (convite) ganha o bônus somado ao prazo já em curso.
+      // Achado real: uma conta "granted" sem prazo (trial_ends_at NULL,
+      // acesso permanente) caía no cálculo abaixo com base=hoje, e o
+      // acesso permanente virava um prazo de só 5 dias — pior que não dar
+      // bônus nenhum.
+      if (sub.status === "granted") {
+        return { result: "not_eligible" as const };
+      }
+
+      if (sub.status === "trialing") {
         const base = sub.trialEndsAt && new Date(sub.trialEndsAt) > new Date() ? new Date(sub.trialEndsAt) : new Date();
         base.setDate(base.getDate() + LINK_BONUS_DAYS);
         await tx.get(`UPDATE subscriptions SET trial_ends_at = $1, updated_at = now() WHERE id = $2`, [
@@ -104,12 +114,17 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
         [sub.id, LINK_BONUS_DAYS]
       );
 
-      return { bonusApplied: true };
+      return { result: "applied" as const };
     });
 
-    if (linked?.bonusApplied) {
+    if (linked?.result === "applied") {
       await sendTelegramAlert(
         `🎉 Telegram vinculado! Você ganhou +${LINK_BONUS_DAYS} dias de acesso no STRIX.`,
+        String(chatId)
+      );
+    } else if (linked?.result === "not_eligible") {
+      await sendTelegramAlert(
+        "✅ Telegram vinculado com sucesso! Sua conta já tem acesso liberado pelo suporte, então não recebe o bônus de dias.",
         String(chatId)
       );
     } else if (linked) {
