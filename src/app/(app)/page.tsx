@@ -196,6 +196,20 @@ function VendasPageInner() {
       .filter((s) => !onlyOwed || debtAgeFilter === 0 || daysSince(s.saleDate) >= debtAgeFilter);
   }, [sales, q, onlyOwed, viewMonth, debtAgeFilter, monthFilterActive]);
 
+  // Lista renderizada em telas com centenas de vendas ficava enorme (e no PWA
+  // chegou a atrapalhar o posicionamento da barra inferior) — mostra só as
+  // primeiras 80 até a pessoa pedir o resto. Some sozinho quando o filtro
+  // muda, senão ficaria expandido/contraído sem relação com o que tá vendo.
+  const SALES_PAGE_SIZE = 80;
+  const [showAllSales, setShowAllSales] = useState(false);
+  useEffect(() => {
+    setShowAllSales(false);
+  }, [q, onlyOwed, viewMonth, debtAgeFilter]);
+  const visibleSales = useMemo(
+    () => (showAllSales ? filteredSales : filteredSales.slice(0, SALES_PAGE_SIZE)),
+    [filteredSales, showAllSales]
+  );
+
   // Um mês só é arquivado por inteiro (a rota de arquivar pega todas as
   // vendas do mês de uma vez) — então "sem vendas ativas mas com vendas no
   // includeArchived=1" significa "esse mês está arquivado", não "vazio".
@@ -370,7 +384,7 @@ function VendasPageInner() {
         <>
           {/* Cartões — telas pequenas */}
           <div className="space-y-3 md:hidden">
-            {filteredSales.map((s) => (
+            {visibleSales.map((s) => (
               <div
                 key={s.id}
                 onClick={() => setSelectedSaleId(s.id)}
@@ -433,7 +447,7 @@ function VendasPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {filteredSales.map((s) => (
+                {visibleSales.map((s) => (
                   <tr
                     key={s.id}
                     onClick={() => setSelectedSaleId(s.id)}
@@ -477,6 +491,15 @@ function VendasPageInner() {
               </tbody>
             </table>
           </div>
+
+          {!showAllSales && filteredSales.length > visibleSales.length && (
+            <button
+              onClick={() => setShowAllSales(true)}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-900 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+            >
+              Ver mais ({filteredSales.length - visibleSales.length} restantes)
+            </button>
+          )}
         </>
       )}
 
