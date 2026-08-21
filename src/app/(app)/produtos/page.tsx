@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useStandalone } from "@/lib/useStandalone";
+import { parseNumber } from "../page";
 
 type Product = {
   id: number;
@@ -70,8 +71,8 @@ export default function ProdutosPage() {
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const buy = Number(buyPrice.replace(",", "."));
-    const sell = Number(sellPrice.replace(",", "."));
+    const buy = parseNumber(buyPrice);
+    const sell = parseNumber(sellPrice);
     if (!name.trim() || Number.isNaN(buy) || Number.isNaN(sell)) {
       setError("Preencha nome e preços válidos.");
       return;
@@ -115,8 +116,8 @@ export default function ProdutosPage() {
 
   async function handleSaveEdit(p: Product) {
     setEditError(null);
-    const buy = Number(editBuyPrice.replace(",", "."));
-    const sell = Number(editSellPrice.replace(",", "."));
+    const buy = parseNumber(editBuyPrice);
+    const sell = parseNumber(editSellPrice);
     if (!editName.trim() || Number.isNaN(buy) || Number.isNaN(sell)) {
       setEditError("Preencha nome e preços válidos.");
       return;

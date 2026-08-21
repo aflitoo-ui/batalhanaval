@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStandalone } from "@/lib/useStandalone";
 
-type Product = {
+export type Product = {
   id: number;
   name: string;
   defaultBuyPrice: number;
@@ -12,14 +12,14 @@ type Product = {
   active: boolean;
 };
 
-type Customer = {
+export type Customer = {
   id: number;
   name: string;
   phone: string | null;
   active: boolean;
 };
 
-type Sale = {
+export type Sale = {
   id: number;
   saleDate: string;
   customerId: number | null;
@@ -37,19 +37,41 @@ type Sale = {
   profit: number;
 };
 
-type PaymentEntry = { id: number; amount: number; paidAt: string; notes: string | null };
+export type PaymentEntry = { id: number; amount: number; paidAt: string; notes: string | null };
 
-function formatBRL(n: number) {
+export function formatBRL(n: number) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function formatDate(iso: string) {
+export function formatDate(iso: string) {
   const [, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}`;
 }
 
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+// Aceita tanto "10,5" (formato BR digitado) quanto "1.234,56" (com milhar) —
+// só remove pontos quando há vírgula, senão um valor como "1000" (sem
+// vírgula) seria lido errado como 1 (achado em auditoria: o mobile tinha
+// esse mesmo tipo de bug, corrigido lá com a mesma lógica). Retorna NaN pra
+// entrada inválida (não 0) de propósito — o resto do código já valida com
+// Number.isNaN antes de salvar, então "0 silencioso" esconderia erro de
+// digitação; quem só quer exibir um preview usa `|| 0` como já fazia.
+export function parseNumber(v: string): number {
+  if (!v) return NaN;
+  const str = v.trim();
+  const normalized = str.includes(",") ? str.replace(/\./g, "").replace(",", ".") : str;
+  return Number(normalized);
+}
+
+// Dia local (fuso do navegador), não UTC — toISOString() sempre reflete UTC,
+// o que fazia o app "virar o dia" ~3h antes da meia-noite real no horário de
+// Brasília, inflando todo contador de dias em atraso por algumas horas
+// diariamente (achado em auditoria).
+export function todayISO() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function daysSince(iso: string) {
@@ -84,10 +106,10 @@ function currentYearMonth() {
   return { year: d.getFullYear(), month: d.getMonth() };
 }
 
-const ADJUSTMENT_HINT =
+export const ADJUSTMENT_HINT =
   "Use quando o cliente já te devia algum valor atrasado de antes e você quer somar essa dívida ao total dessa venda. Toque no +/− ao lado do campo pra escolher entre somar ou descontar.";
 
-function AdjustmentSignToggle({ negative, onToggle }: { negative: boolean; onToggle: () => void }) {
+export function AdjustmentSignToggle({ negative, onToggle }: { negative: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"
@@ -121,7 +143,6 @@ function VendasPageInner() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewSale, setShowNewSale] = useState(false);
-  const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [onlyOwed, setOnlyOwed] = useState(false);
   const [debtAgeFilter, setDebtAgeFilter] = useState(0);
@@ -422,7 +443,7 @@ function VendasPageInner() {
             {visibleSales.map((s) => (
               <div
                 key={s.id}
-                onClick={() => setSelectedSaleId(s.id)}
+                onClick={() => router.push(`/venda/${s.id}`)}
                 className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 active:bg-zinc-800/50"
               >
                 <div className="flex items-start justify-between gap-2">
@@ -485,7 +506,7 @@ function VendasPageInner() {
                 {visibleSales.map((s) => (
                   <tr
                     key={s.id}
-                    onClick={() => setSelectedSaleId(s.id)}
+                    onClick={() => router.push(`/venda/${s.id}`)}
                     className="cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50"
                   >
                     <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
@@ -548,22 +569,6 @@ function VendasPageInner() {
           onSaved={() => {
             setShowNewSale(false);
             setViewMonth(currentYearMonth());
-            load();
-          }}
-        />
-      )}
-
-      {selectedSaleId !== null && (
-        <SaleModal
-          sale={sales.find((s) => s.id === selectedSaleId)!}
-          products={products.filter((p) => p.active)}
-          customers={customers.filter((c) => c.active)}
-          customerUsage={customerUsage}
-          onCustomerCreated={(c) => setCustomers((prev) => [...prev, c])}
-          onClose={() => setSelectedSaleId(null)}
-          onChanged={load}
-          onDeleted={() => {
-            setSelectedSaleId(null);
             load();
           }}
         />
@@ -665,454 +670,6 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
         <div className="overflow-x-hidden overflow-y-auto overscroll-contain p-5 pt-4">{children}</div>
       </div>
     </div>
-  );
-}
-
-// Fundido a partir de 3 modais separados (detalhe somente-leitura, pagamentos
-// e edição) que existiam antes — igual ao mobile, que já mostra tudo numa
-// tela só. Mantém a confirmação de alterações antes de salvar (mesma lógica
-// de diff do mobile), já que mexe direto em valor financeiro da venda.
-function SaleModal({
-  sale,
-  products,
-  customers,
-  customerUsage,
-  onCustomerCreated,
-  onClose,
-  onChanged,
-  onDeleted,
-}: {
-  sale: Sale;
-  products: Product[];
-  customers: Customer[];
-  customerUsage: Map<number, number>;
-  onCustomerCreated: (c: Customer) => void;
-  onClose: () => void;
-  onChanged: () => void;
-  onDeleted: () => void;
-}) {
-  const [history, setHistory] = useState<PaymentEntry[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [amount, setAmount] = useState("");
-  const [paidAt, setPaidAt] = useState(todayISO());
-  const [paymentNotes, setPaymentNotes] = useState("");
-  const [paymentError, setPaymentError] = useState<string | null>(null);
-  const [savingPayment, setSavingPayment] = useState(false);
-  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(null);
-  const [confirmDeletePaymentId, setConfirmDeletePaymentId] = useState<number | null>(null);
-
-  const [saleDate, setSaleDate] = useState(sale.saleDate.slice(0, 10));
-  const [productId, setProductId] = useState<number>(sale.productId);
-  const [customer, setCustomer] = useState<Customer | null>(
-    sale.customerId ? { id: sale.customerId, name: sale.customerName || "", phone: null, active: true } : null
-  );
-  const [quantity, setQuantity] = useState(String(sale.quantity));
-  const [buyPrice, setBuyPrice] = useState(String(sale.unitBuyPrice));
-  const [sellPrice, setSellPrice] = useState(String(sale.unitSellPrice));
-  const [adjustment, setAdjustment] = useState(sale.adjustment ? String(Math.abs(sale.adjustment)) : "");
-  const [adjustmentNegative, setAdjustmentNegative] = useState(sale.adjustment < 0);
-  const [notes, setNotes] = useState(sale.notes || "");
-  const [editError, setEditError] = useState<string | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [pendingChanges, setPendingChanges] = useState<string[] | null>(null);
-
-  const [confirmDeleteSale, setConfirmDeleteSale] = useState(false);
-  const [deletingSale, setDeletingSale] = useState(false);
-
-  async function loadHistory() {
-    setLoadingHistory(true);
-    const res = await fetch(`/api/sales/${sale.id}/payments`);
-    const data = await res.json().catch(() => null);
-    setHistory(data?.payments || []);
-    setLoadingHistory(false);
-  }
-
-  useEffect(() => {
-    void loadHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sale.id]);
-
-  async function handleAddPayment(e: React.FormEvent) {
-    e.preventDefault();
-    setPaymentError(null);
-    const value = Number(amount.replace(",", "."));
-    if (!value || value <= 0) {
-      setPaymentError("Informe um valor válido.");
-      return;
-    }
-    setSavingPayment(true);
-    const res = await fetch(`/api/sales/${sale.id}/payments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: value, paidAt, notes: paymentNotes.trim() || undefined }),
-    });
-    const data = await res.json();
-    setSavingPayment(false);
-    if (!res.ok) {
-      setPaymentError(data.error || "Erro ao salvar.");
-      return;
-    }
-    setAmount("");
-    setPaymentNotes("");
-    await loadHistory();
-    onChanged();
-  }
-
-  async function handleDeletePayment(id: number) {
-    setDeletingPaymentId(id);
-    await fetch(`/api/payments/${id}`, { method: "DELETE" });
-    setDeletingPaymentId(null);
-    setConfirmDeletePaymentId(null);
-    await loadHistory();
-    onChanged();
-  }
-
-  // Produto/cliente podem ter sido desativados desde a venda — garante que
-  // continuem aparecendo como opção pra não perder a referência ao editar
-  // outra coisa.
-  const productOptions = products.some((p) => p.id === sale.productId)
-    ? products
-    : [{ id: sale.productId, name: sale.productName, defaultBuyPrice: 0, defaultSellPrice: 0, active: false }, ...products];
-
-  const customerOptions =
-    sale.customerId && !customers.some((c) => c.id === sale.customerId)
-      ? [{ id: sale.customerId, name: sale.customerName || "", phone: null, active: false }, ...customers]
-      : customers;
-
-  const qty = Number(quantity.replace(",", ".")) || 0;
-  const subtotal = qty * (Number(sellPrice.replace(",", ".")) || 0);
-  const adjAbs = adjustment ? Number(adjustment.replace(",", ".")) || 0 : 0;
-  const adjustmentValue = adjustmentNegative ? -adjAbs : adjAbs;
-
-  async function doSaveEdit() {
-    setSavingEdit(true);
-    const res = await fetch(`/api/sales/${sale.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        saleDate,
-        productId,
-        customerId: customer?.id,
-        quantity: qty,
-        unitBuyPrice: Number(buyPrice.replace(",", ".")),
-        unitSellPrice: Number(sellPrice.replace(",", ".")),
-        adjustment: adjustmentValue,
-        notes: notes.trim() || null,
-      }),
-    });
-    const data = await res.json().catch(() => null);
-    setSavingEdit(false);
-    setPendingChanges(null);
-    if (!res.ok) {
-      setEditError(data?.error || "Erro ao salvar.");
-      return;
-    }
-    onChanged();
-    onClose();
-  }
-
-  // Mostra só o que realmente mudou antes de gravar — evita salvar uma
-  // edição sem querer, já que mexe direto no valor financeiro da venda
-  // (mesma lógica de diff do mobile).
-  function handleSaveEdit(e: React.FormEvent) {
-    e.preventDefault();
-    setEditError(null);
-    const qp = Number(buyPrice.replace(",", "."));
-    const qv = Number(sellPrice.replace(",", "."));
-    if (!customer) {
-      setEditError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
-      return;
-    }
-    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv) || Number.isNaN(adjustmentValue)) {
-      setEditError("Preencha todos os campos corretamente.");
-      return;
-    }
-
-    const changes: string[] = [];
-    if (saleDate !== sale.saleDate.slice(0, 10)) {
-      changes.push(`Data: ${formatDate(sale.saleDate)} → ${formatDate(saleDate)}`);
-    }
-    if (productId !== sale.productId) {
-      const newName = productOptions.find((p) => p.id === productId)?.name || "?";
-      changes.push(`Produto: ${sale.productName} → ${newName}`);
-    }
-    if (customer.id !== sale.customerId) {
-      changes.push(`Cliente: ${sale.customerName || "sem cliente"} → ${customer.name}`);
-    }
-    if (qty !== sale.quantity) {
-      changes.push(`Quantidade: ${sale.quantity} → ${qty}`);
-    }
-    if (qv !== sale.unitSellPrice) {
-      changes.push(`Preço de venda: ${formatBRL(sale.unitSellPrice)} → ${formatBRL(qv)}`);
-    }
-    if (qp !== sale.unitBuyPrice) {
-      changes.push(`Preço de custo: ${formatBRL(sale.unitBuyPrice)} → ${formatBRL(qp)}`);
-    }
-    if (adjustmentValue !== (sale.adjustment || 0)) {
-      const from = sale.adjustment ? `${sale.adjustment > 0 ? "+" : "−"}${formatBRL(Math.abs(sale.adjustment))}` : "sem ajuste";
-      const to = adjustmentValue ? `${adjustmentValue > 0 ? "+" : "−"}${formatBRL(Math.abs(adjustmentValue))}` : "sem ajuste";
-      changes.push(`Ajuste no total: ${from} → ${to}`);
-    }
-    if ((notes || "") !== (sale.notes || "")) {
-      changes.push("Observações alteradas");
-    }
-
-    if (changes.length === 0) {
-      onClose();
-      return;
-    }
-    setPendingChanges(changes);
-  }
-
-  async function handleDeleteSale() {
-    setDeletingSale(true);
-    await fetch(`/api/sales/${sale.id}`, { method: "DELETE" });
-    onDeleted();
-  }
-
-  return (
-    <ModalShell title={`Venda — ${sale.customerName || "Sem cliente"}`} onClose={onClose}>
-      <div className="mb-3 grid grid-cols-4 gap-2 text-sm">
-        <div>
-          <p className="text-[11px] text-zinc-500">Total</p>
-          <p className="text-zinc-200">{formatBRL(sale.total)}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-zinc-500">Pagou</p>
-          <p className="text-emerald-400">{formatBRL(sale.paid)}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-zinc-500">Deve</p>
-          <p className="font-medium text-red-400">{sale.owed > 0 ? formatBRL(sale.owed) : "-"}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-zinc-500">Lucro</p>
-          <p className="text-zinc-200">{formatBRL(sale.profit)}</p>
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Pagamentos</h3>
-        {loadingHistory ? (
-          <p className="text-sm text-zinc-500">Carregando...</p>
-        ) : history.length === 0 ? (
-          <p className="text-sm text-zinc-500">Nenhum pagamento registrado ainda.</p>
-        ) : (
-          <ul className="max-h-40 space-y-1.5 overflow-y-auto">
-            {history.map((h) => (
-              <li key={h.id} className="rounded-md border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-400">{formatDate(h.paidAt)}</span>
-                  <span className="text-emerald-400">{formatBRL(h.amount)}</span>
-                  {confirmDeletePaymentId === h.id ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-xs text-zinc-500">Remover?</span>
-                      <button
-                        onClick={() => handleDeletePayment(h.id)}
-                        disabled={deletingPaymentId === h.id}
-                        className="rounded-md px-2 py-1 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-emerald-400 disabled:opacity-60"
-                      >
-                        {deletingPaymentId === h.id ? "..." : "sim"}
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeletePaymentId(null)}
-                        className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
-                      >
-                        não
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDeletePaymentId(h.id)}
-                      className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-red-400"
-                    >
-                      remover
-                    </button>
-                  )}
-                </div>
-                {h.notes && <p className="mt-1 text-xs italic text-zinc-500">{h.notes}</p>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {sale.owed > 0 ? (
-        <form onSubmit={handleAddPayment} className="space-y-3 border-t border-zinc-800 pt-3">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Valor pago">
-              <input
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="input"
-                inputMode="decimal"
-                placeholder="0"
-              />
-            </Field>
-            <Field label="Data">
-              <DateField value={paidAt} onChange={setPaidAt} />
-            </Field>
-          </div>
-          <Field label="Observação (opcional)">
-            <input value={paymentNotes} onChange={(e) => setPaymentNotes(e.target.value)} className="input" />
-          </Field>
-          {paymentError && <p className="text-sm text-red-400">{paymentError}</p>}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setAmount(String(Math.round(sale.owed * 100) / 100))}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
-            >
-              Quitar tudo
-            </button>
-            <button
-              type="submit"
-              disabled={savingPayment}
-              className="flex-1 rounded-lg bg-[#3a2268] py-2 text-sm font-medium text-white transition hover:bg-[#6139ae] disabled:opacity-60"
-            >
-              {savingPayment ? "Salvando..." : "Registrar pagamento"}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <p className="border-t border-zinc-800 pt-3 text-sm text-emerald-400">Pago integralmente.</p>
-      )}
-
-      <div className="my-4 border-t border-zinc-800" />
-
-      <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">Detalhes da venda</h3>
-      <form onSubmit={handleSaveEdit} className="space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Data">
-            <DateField value={saleDate} onChange={setSaleDate} />
-          </Field>
-          <Field label="Produto">
-            <select value={productId} onChange={(e) => setProductId(Number(e.target.value))} className="input">
-              {productOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <CustomerPicker
-          customers={customerOptions}
-          value={customer}
-          onChange={setCustomer}
-          onCustomerCreated={onCustomerCreated}
-          usage={customerUsage}
-        />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Field label="Quantidade">
-            <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
-          <Field label="Preço de custo">
-            <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
-          <Field label="Preço de venda">
-            <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
-        </div>
-        <p className="flex items-center justify-between text-xs text-zinc-500">
-          <span>Subtotal (qtd × venda)</span>
-          <span className="font-medium text-zinc-300">{formatBRL(subtotal)}</span>
-        </p>
-        <Field
-          label={
-            <>
-              Ajuste no total (opcional)
-              <InfoTip text={ADJUSTMENT_HINT} />
-            </>
-          }
-        >
-          <div className="flex gap-2">
-            <input
-              value={adjustment}
-              onChange={(e) => setAdjustment(e.target.value.replace(/-/g, ""))}
-              className="input flex-1"
-              placeholder="0,00"
-              inputMode="decimal"
-            />
-            <AdjustmentSignToggle negative={adjustmentNegative} onToggle={() => setAdjustmentNegative((v) => !v)} />
-          </div>
-        </Field>
-        <Field label="Observação (opcional)">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="input min-h-16 resize-y"
-            placeholder="Alguma anotação sobre essa venda..."
-          />
-        </Field>
-        {editError && <p className="text-sm text-red-400">{editError}</p>}
-
-        {pendingChanges ? (
-          <div className="rounded-lg border border-amber-800 bg-amber-950/30 p-3">
-            <p className="mb-2 text-xs font-medium text-amber-400">Confirmar alterações:</p>
-            <ul className="mb-3 space-y-1 text-xs text-zinc-300">
-              {pendingChanges.map((c, i) => (
-                <li key={i}>• {c}</li>
-              ))}
-            </ul>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setPendingChanges(null)}
-                className="flex-1 rounded-lg border border-zinc-700 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={doSaveEdit}
-                disabled={savingEdit}
-                className="flex-1 rounded-lg bg-amber-600 py-2 text-sm font-medium text-white transition hover:bg-amber-500 disabled:opacity-60"
-              >
-                {savingEdit ? "Salvando..." : "Confirmar e salvar"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="submit"
-            className="w-full rounded-lg bg-[#3a2268] py-2 text-sm font-medium text-white transition hover:bg-[#6139ae]"
-          >
-            Salvar alterações
-          </button>
-        )}
-      </form>
-
-      <div className="my-4 border-t border-zinc-800" />
-
-      {confirmDeleteSale ? (
-        <div className="space-y-2">
-          <p className="text-center text-sm text-zinc-400">Excluir essa venda? Não pode ser desfeito.</p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setConfirmDeleteSale(false)}
-              className="flex-1 rounded-lg border border-zinc-700 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleDeleteSale}
-              disabled={deletingSale}
-              className="flex-1 rounded-lg border border-red-800 py-2 text-sm font-medium text-red-400 transition hover:bg-red-950/40 disabled:opacity-60"
-            >
-              {deletingSale ? "Excluindo..." : "Confirmar exclusão"}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          onClick={() => setConfirmDeleteSale(true)}
-          className="w-full rounded-lg border border-red-900 py-2 text-sm font-medium text-red-400 transition hover:bg-red-950/30"
-        >
-          Excluir venda
-        </button>
-      )}
-    </ModalShell>
   );
 }
 
@@ -1286,14 +843,14 @@ function NewSaleModal({
 
   // Prévia ao vivo (igual ao mobile) — dá pra ver o resultado antes de
   // salvar, em vez de só descobrir depois de confirmar.
-  const qtyPreview = Number(quantity.replace(",", ".")) || 0;
-  const sellPreview = Number(sellPrice.replace(",", ".")) || 0;
-  const buyPreview = Number(buyPrice.replace(",", ".")) || 0;
-  const adjAbsPreview = adjustment ? Number(adjustment.replace(",", ".")) || 0 : 0;
+  const qtyPreview = parseNumber(quantity) || 0;
+  const sellPreview = parseNumber(sellPrice) || 0;
+  const buyPreview = parseNumber(buyPrice) || 0;
+  const adjAbsPreview = adjustment ? parseNumber(adjustment) || 0 : 0;
   const adjPreview = adjustmentNegative ? -adjAbsPreview : adjAbsPreview;
   const totalPreview = qtyPreview * sellPreview + adjPreview;
   const profitPreview = totalPreview - qtyPreview * buyPreview;
-  const paidPreview = initialPayment ? Number(initialPayment.replace(",", ".")) || 0 : 0;
+  const paidPreview = initialPayment ? parseNumber(initialPayment) || 0 : 0;
   const owedPreview = totalPreview - paidPreview;
 
   // Se o modal abrir antes da lista de produtos terminar de carregar (ex:
@@ -1315,11 +872,11 @@ function NewSaleModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const qty = Number(quantity.replace(",", "."));
-    const qp = Number(buyPrice.replace(",", "."));
-    const qv = Number(sellPrice.replace(",", "."));
-    const payment = initialPayment ? Number(initialPayment.replace(",", ".")) : 0;
-    const adjAbs = adjustment ? Number(adjustment.replace(",", ".")) : 0;
+    const qty = parseNumber(quantity);
+    const qp = parseNumber(buyPrice);
+    const qv = parseNumber(sellPrice);
+    const payment = initialPayment ? parseNumber(initialPayment) : 0;
+    const adjAbs = adjustment ? parseNumber(adjustment) : 0;
     const adj = adjustmentNegative ? -adjAbs : adjAbs;
     if (!customer) {
       setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
@@ -1471,7 +1028,7 @@ function NewSaleModal({
 
 // Busca + chips, igual ao seletor de produto do mobile — mais rápido de
 // tocar do que abrir um <select> nativo, principalmente no web-app.
-function ProductPicker({
+export function ProductPicker({
   products,
   value,
   onChange,
@@ -1525,7 +1082,7 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-function CustomerPicker({
+export function CustomerPicker({
   customers,
   value,
   onChange,
@@ -1642,7 +1199,7 @@ const WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"];
 // instalado o picker nativo do Android/Chrome abre num azul do sistema que
 // não tem nada a ver com o resto do app (é um componente de sistema, não dá
 // pra estilizar via CSS). Mesma abordagem do DateField do mobile.
-function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
+export function DateField({ value, onChange }: { value: string; onChange: (iso: string) => void }) {
   const [open, setOpen] = useState(false);
   const selected = isoToLocalDate(value);
   const [viewYear, setViewYear] = useState(selected.getFullYear());
@@ -1824,7 +1381,7 @@ function formatDisplayDate(d: Date): string {
   return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
-function Field({
+export function Field({
   label,
   children,
   labelClassName,
@@ -1843,7 +1400,7 @@ function Field({
   );
 }
 
-function InfoTip({ text }: { text: string }) {
+export function InfoTip({ text }: { text: string }) {
   return (
     <span
       title={text}
