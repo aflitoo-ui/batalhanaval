@@ -720,8 +720,8 @@ export function UsuariosClient() {
                 <col className="w-[8%]" />
                 <col className="w-[9%]" />
                 <col className="w-[12%]" />
-                <col className="w-[15%]" />
-                <col className="w-[33%]" />
+                <col className="w-[38%]" />
+                <col className="w-[10%]" />
               </colgroup>
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
