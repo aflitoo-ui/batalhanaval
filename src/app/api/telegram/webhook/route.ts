@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { withTransaction } from "@/db/pool";
 import { withApiErrors } from "@/lib/api-errors";
 import { sendTelegramAlert } from "@/lib/telegram";
+import { buildDailySummaryText } from "@/lib/dailySummary";
 
 const LINK_BONUS_DAYS = 5;
 
@@ -113,6 +114,14 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
       );
     } else if (linked) {
       await sendTelegramAlert("✅ Telegram vinculado com sucesso! (bônus de dias já recebido anteriormente)", String(chatId));
+    }
+  } else if (text === "/resumo" && chatId !== undefined) {
+    // Mesmo boletim do cron diário, mas sob demanda — só responde no chat
+    // do próprio admin (TELEGRAM_CHAT_ID), nunca pro chat de um usuário
+    // comum que tenha vinculado o próprio Telegram, já que o resumo expõe
+    // dados do negócio inteiro (MRR, todas as contas em atraso etc.).
+    if (String(chatId) === process.env.TELEGRAM_CHAT_ID) {
+      await sendTelegramAlert(await buildDailySummaryText(), String(chatId));
     }
   }
 
