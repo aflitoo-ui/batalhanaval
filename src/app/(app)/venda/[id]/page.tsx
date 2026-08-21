@@ -209,6 +209,7 @@ function SaleDetail({
     setPaymentNotes("");
     await loadHistory();
     onChanged();
+    router.push("/");
   }
 
   async function handleDeletePayment(id: number) {
