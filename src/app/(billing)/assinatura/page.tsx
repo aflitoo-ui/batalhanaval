@@ -285,6 +285,12 @@ export default function AssinaturaPage() {
         </div>
         <div className="flex items-center gap-1">
           {email && <span className="mr-1 truncate text-sm text-zinc-500">{email}</span>}
+          <Link
+            href="/sobre"
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
+          >
+            Sobre
+          </Link>
           <a
             href="https://t.me/nick_ki"
             target="_blank"
