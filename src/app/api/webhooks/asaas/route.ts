@@ -109,13 +109,14 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
   // por que fazer parte da transação do banco.
   if (alertTarget) {
     const amountBRL = alertTarget.amount?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    // "🔴 URGENTE" só nos dois casos que pedem ação/atenção rápida do admin
+    // (risco de perder cliente ou possível fraude) — o resto é informativo,
+    // pra não afogar o que realmente precisa de resposta no meio do ruído.
     const messages: Record<string, string> = {
       payment_approved: `✅ Pagamento aprovado: ${alertTarget.email} — ${amountBRL}`,
-      payment_failed: `⚠️ Pagamento falhou: ${alertTarget.email}`,
+      payment_failed: `🔴 URGENTE — Pagamento falhou: ${alertTarget.email}`,
       payment_refunded: `💸 Pagamento estornado: ${alertTarget.email}`,
-      // Chargeback costuma indicar disputa/fraude — mais sério que um
-      // estorno normal, mensagem já mais grave direto (sem duplicar alerta).
-      payment_chargeback: `🚨 Chargeback em disputa — verifique a conta de ${alertTarget.email}.`,
+      payment_chargeback: `🔴 URGENTE — Chargeback em disputa, verifique a conta de ${alertTarget.email}.`,
       subscription_canceled: `❌ Assinatura cancelada: ${alertTarget.email}`,
       subscription_expired: `❌ Assinatura expirada: ${alertTarget.email}`,
     };
