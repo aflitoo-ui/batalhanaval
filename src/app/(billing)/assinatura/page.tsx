@@ -72,6 +72,7 @@ export default function AssinaturaPage() {
   const router = useRouter();
   useIdleLogout(IDLE_LOGOUT_MS);
   const [access, setAccess] = useState<AccessStatus | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showAllHistory, setShowAllHistory] = useState(false);
@@ -96,6 +97,7 @@ export default function AssinaturaPage() {
     const res = await fetch("/api/subscriptions/me");
     const data = await res.json();
     setAccess(data.access);
+    setEmail(data.email ?? null);
     setSubscription(data.subscription);
     setHistory(data.history || []);
     setLoading(false);
@@ -282,6 +284,7 @@ export default function AssinaturaPage() {
           </Link>
         </div>
         <div className="flex items-center gap-1">
+          {email && <span className="mr-1 truncate text-sm text-zinc-500">{email}</span>}
           <a
             href="https://t.me/nick_ki"
             target="_blank"

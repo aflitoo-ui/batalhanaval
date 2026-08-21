@@ -50,6 +50,7 @@ export const GET = withApiErrors("subscriptions.me.GET", async () => {
 
   return NextResponse.json({
     access,
+    email: user.email,
     subscription: sub
       ? { ...sub, price: Number(sub.price), daysLeft: fullDaysLeft }
       : null,
