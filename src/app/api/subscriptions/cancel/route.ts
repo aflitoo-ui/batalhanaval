@@ -3,6 +3,7 @@ import { get, run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { getPaymentProvider } from "@/lib/payments";
+import { sendTelegramAlert } from "@/lib/telegram";
 
 export const POST = withApiErrors("subscriptions.cancel.POST", async () => {
   const user = await getSessionUser();
@@ -24,6 +25,11 @@ export const POST = withApiErrors("subscriptions.cancel.POST", async () => {
   await run(`UPDATE subscriptions SET status = 'canceled', canceled_at = now(), updated_at = now() WHERE id = $1`, [
     sub.id,
   ]);
+
+  // Antes só cancelamento vindo do lado do Asaas (subscription_canceled)
+  // avisava o admin — cancelamento pela própria conta ficava em silêncio.
+  // Informativo, não urgente: o acesso segue normal até o fim do período.
+  void sendTelegramAlert(`↩️ Cancelamento voluntário: ${user.email} — acesso segue até o fim do período pago.`);
 
   return NextResponse.json({ ok: true });
 });
