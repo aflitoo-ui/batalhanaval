@@ -48,6 +48,17 @@ export function formatDate(iso: string) {
   return `${d}/${m}`;
 }
 
+// Mensagem de bloqueio nas telas de dados (Vendas/Produtos/Clientes/
+// Relatórios) — antes era sempre "assinatura expirou", mesmo pra estorno,
+// contestação ou pagamento atrasado, quando nada "expirou" de fato nesses
+// casos (achado em auditoria).
+export function subscriptionBlockedMessage(status: string | undefined): string {
+  if (status === "refunded") return "Pagamento estornado. Regularize abaixo pra voltar a usar o STRIX.";
+  if (status === "chargeback") return "Pagamento contestado. Regularize abaixo pra voltar a usar o STRIX.";
+  if (status === "past_due") return "Pagamento atrasado. Regularize abaixo pra voltar a usar o STRIX.";
+  return "Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.";
+}
+
 // Aceita tanto "10,5" (formato BR digitado) quanto "1.234,56" (com milhar) —
 // só remove pontos quando há vírgula, senão um valor como "1000" (sem
 // vírgula) seria lido errado como 1 (achado em auditoria: o mobile tinha
@@ -151,7 +162,7 @@ function VendasPageInner() {
   const [showUnarchiveMonth, setShowUnarchiveMonth] = useState(false);
   const [archiveBlockedMsg, setArchiveBlockedMsg] = useState<string | null>(null);
   const [allSales, setAllSales] = useState<Sale[]>([]);
-  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
+  const [subscriptionBlockedStatus, setSubscriptionBlockedStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (!archiveBlockedMsg) return;
@@ -174,7 +185,7 @@ function VendasPageInner() {
       if (res.status === 403) {
         const body = await res.json().catch(() => null);
         if (body?.code === "subscription_required") {
-          setSubscriptionBlocked(true);
+          setSubscriptionBlockedStatus(body?.subscriptionStatus || "expired");
           setLoading(false);
           return;
         }
@@ -189,7 +200,7 @@ function VendasPageInner() {
     setAllSales(allSalesData.sales || []);
     setProducts(productsData.products || []);
     setCustomers(customersData.customers || []);
-    setSubscriptionBlocked(false);
+    setSubscriptionBlockedStatus(null);
     setLoading(false);
   }
 
@@ -412,11 +423,9 @@ function VendasPageInner() {
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
-      ) : subscriptionBlocked ? (
+      ) : subscriptionBlockedStatus ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-red-900 bg-red-950/20 py-8 text-center">
-          <p className="max-w-xs text-sm text-red-400">
-            Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.
-          </p>
+          <p className="max-w-xs text-sm text-red-400">{subscriptionBlockedMessage(subscriptionBlockedStatus)}</p>
           <button
             onClick={() => router.push("/assinatura")}
             className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"

@@ -120,8 +120,16 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
 export async function requireActiveAccess(user: CurrentUser): Promise<NextResponse | null> {
   const access = await getAccessStatus(user);
   if (access.allowed) return null;
+  // subscriptionStatus vai junto pra quem chama poder mostrar uma mensagem
+  // específica do motivo real (estornado/contestado/atrasado), em vez do
+  // "expirou" genérico que não faz sentido pra esses casos (achado em
+  // auditoria).
   return NextResponse.json(
-    { error: "Sua assinatura não está ativa. Assine para continuar usando o STRIX.", code: "subscription_required" },
+    {
+      error: "Sua assinatura não está ativa. Assine para continuar usando o STRIX.",
+      code: "subscription_required",
+      subscriptionStatus: access.status,
+    },
     { status: 403 }
   );
 }

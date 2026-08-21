@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { subscriptionBlockedMessage } from "../page";
 
 type Sale = {
   id: number;
@@ -232,7 +233,7 @@ export default function RelatoriosPage() {
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
   const [allTime, setAllTime] = useState(false);
   const [expandedAgeBucket, setExpandedAgeBucket] = useState<string | null>(null);
-  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
+  const [subscriptionBlockedStatus, setSubscriptionBlockedStatus] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -246,7 +247,7 @@ export default function RelatoriosPage() {
       if (res.status === 403) {
         const body = await res.json().catch(() => null);
         if (body?.code === "subscription_required") {
-          setSubscriptionBlocked(true);
+          setSubscriptionBlockedStatus(body?.subscriptionStatus || "expired");
           setLoading(false);
           return;
         }
@@ -254,7 +255,7 @@ export default function RelatoriosPage() {
 
       const data = await res.json();
       setSales(data.sales || []);
-      setSubscriptionBlocked(false);
+      setSubscriptionBlockedStatus(null);
       setLoading(false);
     })();
   }, []);
@@ -327,14 +328,12 @@ export default function RelatoriosPage() {
     return <p className="text-sm text-zinc-500">Carregando...</p>;
   }
 
-  if (subscriptionBlocked) {
+  if (subscriptionBlockedStatus) {
     return (
       <div className="space-y-6">
         <h1 className="text-xl font-bold text-zinc-100">Relatórios</h1>
         <div className="flex flex-col items-center gap-3 rounded-lg border border-red-900 bg-red-950/20 py-8 text-center">
-          <p className="max-w-xs text-sm text-red-400">
-            Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.
-          </p>
+          <p className="max-w-xs text-sm text-red-400">{subscriptionBlockedMessage(subscriptionBlockedStatus)}</p>
           <button
             onClick={() => router.push("/assinatura")}
             className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"
