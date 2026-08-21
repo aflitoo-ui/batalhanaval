@@ -337,8 +337,8 @@ function VendasPageInner() {
       )}
 
       {q && (
-        <p className="text-center text-xs text-zinc-500">
-          Somando só os resultados de <span className="font-medium text-zinc-300">&quot;{search.trim()}&quot;</span>
+        <p className="text-center text-sm text-zinc-300">
+          Somando só os resultados de <span className="font-semibold text-zinc-100">&quot;{search.trim()}&quot;</span>
         </p>
       )}
 
