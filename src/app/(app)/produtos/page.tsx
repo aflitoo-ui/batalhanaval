@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useStandalone } from "@/lib/useStandalone";
 
 type Product = {
@@ -34,11 +35,26 @@ export default function ProdutosPage() {
   const [editSellPrice, setEditSellPrice] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
 
   async function load() {
     const res = await fetch("/api/products");
+
+    // Sem assinatura ativa, a API nega com 403/subscription_required — trata
+    // isso explicitamente pra não confundir "bloqueado" com "sem produtos
+    // ainda" (que mostraria a mesma lista vazia).
+    if (res.status === 403) {
+      const body = await res.json().catch(() => null);
+      if (body?.code === "subscription_required") {
+        setSubscriptionBlocked(true);
+        setLoading(false);
+        return;
+      }
+    }
+
     const data = await res.json();
     setProducts(data.products || []);
+    setSubscriptionBlocked(false);
     setLoading(false);
   }
 
@@ -235,6 +251,18 @@ export default function ProdutosPage() {
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
+      ) : subscriptionBlocked ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-red-900 bg-red-950/20 py-8 text-center">
+          <p className="max-w-xs text-sm text-red-400">
+            Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.
+          </p>
+          <Link
+            href="/assinatura"
+            className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"
+          >
+            Ver assinatura
+          </Link>
+        </div>
       ) : visibleProducts.length === 0 ? (
         <p className="py-6 text-center text-sm text-zinc-500">
           {products.length === 0 ? "Nenhum produto cadastrado ainda." : "Nenhum produto encontrado."}

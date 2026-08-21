@@ -130,6 +130,7 @@ function VendasPageInner() {
   const [showUnarchiveMonth, setShowUnarchiveMonth] = useState(false);
   const [archiveBlockedMsg, setArchiveBlockedMsg] = useState<string | null>(null);
   const [allSales, setAllSales] = useState<Sale[]>([]);
+  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
 
   useEffect(() => {
     if (!archiveBlockedMsg) return;
@@ -144,6 +145,21 @@ function VendasPageInner() {
       fetch("/api/products"),
       fetch("/api/customers"),
     ]);
+
+    // Sem assinatura ativa, as APIs negam com 403/subscription_required —
+    // trata isso explicitamente pra não confundir "bloqueado" com "sem
+    // vendas ainda" (que mostraria a mesma lista vazia).
+    for (const res of [salesRes, allSalesRes, productsRes, customersRes]) {
+      if (res.status === 403) {
+        const body = await res.json().catch(() => null);
+        if (body?.code === "subscription_required") {
+          setSubscriptionBlocked(true);
+          setLoading(false);
+          return;
+        }
+      }
+    }
+
     const salesData = await salesRes.json();
     const allSalesData = await allSalesRes.json();
     const productsData = await productsRes.json();
@@ -152,6 +168,7 @@ function VendasPageInner() {
     setAllSales(allSalesData.sales || []);
     setProducts(productsData.products || []);
     setCustomers(customersData.customers || []);
+    setSubscriptionBlocked(false);
     setLoading(false);
   }
 
@@ -368,6 +385,18 @@ function VendasPageInner() {
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
+      ) : subscriptionBlocked ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-red-900 bg-red-950/20 py-8 text-center">
+          <p className="max-w-xs text-sm text-red-400">
+            Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.
+          </p>
+          <button
+            onClick={() => router.push("/assinatura")}
+            className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"
+          >
+            Ver assinatura
+          </button>
+        </div>
       ) : filteredSales.length === 0 ? (
         <p className="py-6 text-center text-sm text-zinc-500">
           {isMonthArchived

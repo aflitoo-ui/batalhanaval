@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Customer = {
   id: number;
@@ -36,6 +37,7 @@ export default function ClientesPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
+  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
 
   const activeCount = customers.filter((c) => c.active).length;
 
@@ -66,10 +68,26 @@ export default function ClientesPage() {
       fetch("/api/customers"),
       fetch("/api/sales?includeArchived=1"),
     ]);
+
+    // Sem assinatura ativa, as APIs negam com 403/subscription_required —
+    // trata isso explicitamente pra não confundir "bloqueado" com "sem
+    // clientes ainda" (que mostraria a mesma lista vazia).
+    for (const res of [customersRes, salesRes]) {
+      if (res.status === 403) {
+        const body = await res.json().catch(() => null);
+        if (body?.code === "subscription_required") {
+          setSubscriptionBlocked(true);
+          setLoading(false);
+          return;
+        }
+      }
+    }
+
     const customersData = await customersRes.json();
     const salesData = await salesRes.json();
     setCustomers(customersData.customers || []);
     setSales(salesData.sales || []);
+    setSubscriptionBlocked(false);
     setLoading(false);
   }
 
@@ -227,6 +245,18 @@ export default function ClientesPage() {
 
       {loading ? (
         <p className="py-6 text-center text-sm text-zinc-500">Carregando...</p>
+      ) : subscriptionBlocked ? (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-red-900 bg-red-950/20 py-8 text-center">
+          <p className="max-w-xs text-sm text-red-400">
+            Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.
+          </p>
+          <Link
+            href="/assinatura"
+            className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"
+          >
+            Ver assinatura
+          </Link>
+        </div>
       ) : customers.length === 0 ? (
         <p className="py-6 text-center text-sm text-zinc-500">Nenhum cliente cadastrado ainda.</p>
       ) : (

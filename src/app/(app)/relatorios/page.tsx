@@ -228,14 +228,29 @@ export default function RelatoriosPage() {
   const [viewMonth, setViewMonth] = useState(currentYearMonth);
   const [allTime, setAllTime] = useState(false);
   const [expandedAgeBucket, setExpandedAgeBucket] = useState<string | null>(null);
+  const [subscriptionBlocked, setSubscriptionBlocked] = useState(false);
 
   useEffect(() => {
     void (async () => {
       // Inclui vendas arquivadas — mês arquivado some da lista de Vendas do
       // dia a dia, mas o histórico financeiro real continua contando aqui.
       const res = await fetch("/api/sales?includeArchived=1");
+
+      // Sem assinatura ativa, a API nega com 403/subscription_required —
+      // trata isso explicitamente pra não confundir "bloqueado" com "sem
+      // vendas ainda" (que mostraria a mesma mensagem de lista vazia).
+      if (res.status === 403) {
+        const body = await res.json().catch(() => null);
+        if (body?.code === "subscription_required") {
+          setSubscriptionBlocked(true);
+          setLoading(false);
+          return;
+        }
+      }
+
       const data = await res.json();
       setSales(data.sales || []);
+      setSubscriptionBlocked(false);
       setLoading(false);
     })();
   }, []);
@@ -306,6 +321,25 @@ export default function RelatoriosPage() {
 
   if (loading) {
     return <p className="text-sm text-zinc-500">Carregando...</p>;
+  }
+
+  if (subscriptionBlocked) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-xl font-bold text-zinc-100">Relatórios</h1>
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-red-900 bg-red-950/20 py-8 text-center">
+          <p className="max-w-xs text-sm text-red-400">
+            Sua assinatura expirou. Regularize abaixo pra voltar a usar o STRIX.
+          </p>
+          <button
+            onClick={() => router.push("/assinatura")}
+            className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"
+          >
+            Ver assinatura
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (sales.length === 0) {

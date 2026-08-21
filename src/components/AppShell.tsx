@@ -142,9 +142,9 @@ export default function AppShell({
     // Assinatura cancelada pelo próprio cliente com muito prazo ainda pela
     // frente não precisa avisar toda hora — só vira útil quando o fim já
     // está próximo. Estorno/chargeback NÃO entram nessa supressão: o acesso
-    // já foi cortado na hora (nem deveriam chegar até aqui, já que a tela
-    // fica bloqueada nesses casos — ver getAccessStatus), então se algum dia
-    // aparecerem, o aviso deve aparecer sempre, sem esperar prazo nenhum.
+    // já foi cortado na hora (a pessoa continua navegando normalmente — só
+    // os DADOS de cada tela ficam bloqueados, ver requireActiveAccess), então
+    // o aviso deve aparecer sempre, sem esperar prazo nenhum.
     if (subscriptionStatus === "canceled" && daysLeft > 5) return;
     setBannerVisible(true);
     const t = setTimeout(() => {
