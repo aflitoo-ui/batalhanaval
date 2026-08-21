@@ -336,6 +336,12 @@ function VendasPageInner() {
         </div>
       )}
 
+      {q && (
+        <p className="text-center text-xs text-zinc-500">
+          Somando só os resultados de <span className="font-medium text-zinc-300">&quot;{search.trim()}&quot;</span>
+        </p>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="Total vendido" value={formatBRL(totals.total)} />
         <SummaryCard label="Recebido" value={formatBRL(totals.paid)} tone="emerald" />
