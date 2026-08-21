@@ -277,11 +277,9 @@ export default function AssinaturaPage() {
             </Link>
             <h1 className="text-xl font-bold text-zinc-100">Minha assinatura</h1>
           </div>
-          {access?.allowed && (
-            <Link href="/" className="text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300">
-              voltar pro sistema
-            </Link>
-          )}
+          <Link href="/" className="text-sm text-zinc-500 underline underline-offset-2 hover:text-zinc-300">
+            voltar pro sistema
+          </Link>
         </div>
         <div className="flex items-center gap-1">
           <a
