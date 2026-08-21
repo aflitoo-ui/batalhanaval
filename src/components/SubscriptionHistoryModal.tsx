@@ -95,7 +95,7 @@ export function SubscriptionHistoryModal({ userId, onClose }: { userId: number; 
                 </span>
               </div>
               <p className="mt-1 text-xs text-zinc-500">{formatBRL(subscription.price)}/mês</p>
-              {subscription.currentPeriodEnd && (
+              {(subscription.status === "active" || subscription.status === "canceled") && subscription.currentPeriodEnd && (
                 <p className="mt-2 text-xs text-zinc-400">
                   Próxima cobrança: <span className="text-zinc-200">{formatDate(subscription.currentPeriodEnd)}</span>
                 </p>

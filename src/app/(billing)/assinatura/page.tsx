@@ -65,7 +65,7 @@ const STATUS_LABEL: Record<string, string> = {
 const HISTORY_STATUS_LABEL: Record<string, string> = {
   approved: "Pago",
   refunded: "Reembolsado",
-  chargeback: "Estorno",
+  chargeback: "Contestado",
 };
 
 export default function AssinaturaPage() {
@@ -319,25 +319,36 @@ export default function AssinaturaPage() {
               <p className="mt-3 text-sm text-amber-400">
                 {(() => {
                   const d = subscription.daysLeft!;
-                  const dias = d > 0 ? `${d} dia${d === 1 ? "" : "s"}` : null;
+                  // d pode vir negativo (prazo já vencido) — sem isso,
+                  // qualquer vencimento passado mostrava "termina hoje" pra
+                  // sempre (achado em auditoria).
+                  const clause = (futurePrefix: string, todayPhrase: string, pastPrefix: string) => {
+                    if (d > 0) return `${futurePrefix} em ${d} dia${d === 1 ? "" : "s"}.`;
+                    if (d === 0) return todayPhrase;
+                    const overdue = Math.abs(d);
+                    return `${pastPrefix} há ${overdue} dia${overdue === 1 ? "" : "s"}.`;
+                  };
                   if (subscription.status === "trialing") {
-                    return dias ? `Você tem ${dias} restante${d === 1 ? "" : "s"} de teste grátis.` : "Seu teste grátis termina hoje.";
+                    if (d > 0) return `Você tem ${d} dia${d === 1 ? "" : "s"} restante${d === 1 ? "" : "s"} de teste grátis.`;
+                    if (d === 0) return "Seu teste grátis termina hoje.";
+                    return `Seu teste grátis terminou há ${Math.abs(d)} dia${Math.abs(d) === 1 ? "" : "s"}.`;
                   }
                   if (subscription.status === "canceled") {
-                    return dias
-                      ? `Cancelada por você — o acesso termina em ${dias}.`
-                      : "Cancelada por você — o acesso termina hoje.";
+                    return `Cancelada por você — ${clause("o acesso termina", "o acesso termina hoje.", "o acesso terminou")}`;
                   }
                   if (subscription.status === "granted") {
-                    return dias ? `Acesso liberado — termina em ${dias}.` : "Acesso liberado — termina hoje.";
+                    return `Acesso liberado — ${clause("termina", "termina hoje.", "terminou")}`;
                   }
                   if (subscription.status === "pending") {
-                    return dias
-                      ? `Fatura gerada — seu acesso continua liberado por ${dias}. Pague antes disso pra não perder o acesso.`
-                      : "Fatura gerada — seu acesso termina hoje se não pagar.";
+                    if (d > 0) {
+                      const dias = `${d} dia${d === 1 ? "" : "s"}`;
+                      return `Fatura gerada — seu acesso continua liberado por ${dias}. Pague antes disso pra não perder o acesso.`;
+                    }
+                    if (d === 0) return "Fatura gerada — seu acesso termina hoje se não pagar.";
+                    return `Fatura gerada — seu acesso já terminou há ${Math.abs(d)} dia${Math.abs(d) === 1 ? "" : "s"}. Pague pra recuperar o acesso.`;
                   }
                   // active
-                  return dias ? `Vence em ${dias}.` : "Vence hoje.";
+                  return clause("Vence", "Vence hoje.", "Venceu");
                 })()}
               </p>
             )}
@@ -352,7 +363,7 @@ export default function AssinaturaPage() {
               </p>
             )}
 
-            {subscription.currentPeriodEnd && (
+            {access?.allowed && subscription.currentPeriodEnd && (
               <p className="mt-3 text-sm text-zinc-400">
                 Próxima cobrança: <span className="text-zinc-200">{formatDate(subscription.currentPeriodEnd)}</span>
               </p>
