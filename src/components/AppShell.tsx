@@ -94,10 +94,19 @@ function SupportLink({ className }: { className: string }) {
   );
 }
 
+// daysLeft pode vir negativo (prazo já vencido, mas ainda não reprocessado
+// pro status "expired") — sem isso, qualquer vencimento passado mostrava
+// "termina hoje" pra sempre, mesmo dias depois (achado em auditoria).
+function daysLeftClause(daysLeft: number, futureVerb: string, todayPhrase: string, pastVerb: string) {
+  if (daysLeft > 0) return `${futureVerb} em ${daysLeft} dia${daysLeft === 1 ? "" : "s"}.`;
+  if (daysLeft === 0) return todayPhrase;
+  const overdue = Math.abs(daysLeft);
+  return `${pastVerb} há ${overdue} dia${overdue === 1 ? "" : "s"}.`;
+}
+
 function subscriptionStatusMessage(status: string | undefined, daysLeft: number) {
-  const dias = `${daysLeft} dia${daysLeft === 1 ? "" : "s"}`;
   if (status === "canceled") {
-    return daysLeft > 0 ? `Cancelada por você — expira em ${dias}.` : "Cancelada por você — expira hoje.";
+    return `Cancelada por você — ${daysLeftClause(daysLeft, "expira", "expira hoje.", "expirou")}`;
   }
   if (status === "refunded") {
     return "Pagamento estornado.";
@@ -106,13 +115,17 @@ function subscriptionStatusMessage(status: string | undefined, daysLeft: number)
     return "Pagamento contestado.";
   }
   if (status === "active") {
-    return daysLeft > 0 ? `Sua assinatura vence em ${dias}.` : "Sua assinatura vence hoje.";
+    return daysLeftClause(daysLeft, "Sua assinatura vence", "Sua assinatura vence hoje.", "Sua assinatura venceu");
   }
   if (status === "granted") {
-    return daysLeft > 0 ? `Seu acesso termina em: ${dias}.` : "Seu acesso termina hoje.";
+    return daysLeftClause(daysLeft, "Seu acesso termina", "Seu acesso termina hoje.", "Seu acesso terminou");
   }
   // trialing (padrão)
-  return daysLeft > 0 ? `Você tem ${dias} restante${daysLeft === 1 ? "" : "s"} de teste grátis.` : "Seu teste grátis termina hoje.";
+  if (daysLeft > 0) {
+    return `Você tem ${daysLeft} dia${daysLeft === 1 ? "" : "s"} restante${daysLeft === 1 ? "" : "s"} de teste grátis.`;
+  }
+  if (daysLeft === 0) return "Seu teste grátis termina hoje.";
+  return `Seu teste grátis terminou há ${Math.abs(daysLeft)} dia${Math.abs(daysLeft) === 1 ? "" : "s"}.`;
 }
 
 export default function AppShell({
