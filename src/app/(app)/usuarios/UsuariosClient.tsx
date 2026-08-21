@@ -725,19 +725,19 @@ export function UsuariosClient() {
               </colgroup>
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
-                  <th className="px-4 py-2">Login</th>
-                  <th className="px-4 py-2">Papel</th>
-                  <th className="px-4 py-2">Status</th>
-                  <th className="px-4 py-2">Desde</th>
-                  <th className="px-4 py-2">Último acesso</th>
-                  <th className="px-4 py-2">Acesso</th>
+                  <th className="border-r border-zinc-800 px-4 py-2">Login</th>
+                  <th className="border-r border-zinc-800 px-4 py-2">Papel</th>
+                  <th className="border-r border-zinc-800 px-4 py-2">Status</th>
+                  <th className="border-r border-zinc-800 px-4 py-2">Desde</th>
+                  <th className="border-r border-zinc-800 px-4 py-2">Último acesso</th>
+                  <th className="border-r border-zinc-800 px-4 py-2">Acesso</th>
                   <th className="px-4 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((u) => (
                   <tr key={u.id} className="border-b border-zinc-900 last:border-0">
-                    <td className="truncate px-4 py-2 font-medium text-zinc-200">
+                    <td className="truncate border-r border-zinc-900 px-4 py-2 font-medium text-zinc-200">
                       {u.email}
                       {u.telegramLinked && (
                         <span className="ml-1.5 text-xs" title="Telegram vinculado">
@@ -745,8 +745,8 @@ export function UsuariosClient() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-2 text-zinc-300">{u.role === "admin" ? "Admin" : "Usuário"}</td>
-                    <td className="px-4 py-2">
+                    <td className="border-r border-zinc-900 px-4 py-2 text-zinc-300">{u.role === "admin" ? "Admin" : "Usuário"}</td>
+                    <td className="border-r border-zinc-900 px-4 py-2">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           u.active ? "bg-emerald-950 text-emerald-400" : "bg-zinc-800 text-zinc-500"
@@ -755,11 +755,11 @@ export function UsuariosClient() {
                         {u.active ? "Ativo" : "Inativo"}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
-                    <td className="px-4 py-2 text-zinc-400">
+                    <td className="border-r border-zinc-900 px-4 py-2 text-zinc-400">{formatDate(u.createdAt)}</td>
+                    <td className="border-r border-zinc-900 px-4 py-2 text-zinc-400">
                       <LastSeenCell iso={u.lastSeenAt} now={now} />
                     </td>
-                    <td className="whitespace-nowrap px-4 py-2 text-zinc-400">
+                    <td className="whitespace-nowrap border-r border-zinc-900 px-4 py-2 text-zinc-400">
                       <span className="flex items-center gap-1.5">
                         {u.role === "admin" ? <span className="text-zinc-600">-</span> : <AccessBadge sub={subStatusByUser[u.id]} />}
                         {u.inviteCredits > 0 && (
