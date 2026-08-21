@@ -66,7 +66,7 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
          FROM subscriptions WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
         [user.id]
       );
-      if (!sub) return { result: "already_used" as const };
+      if (!sub) return { result: "no_subscription" as const };
       await tx.get(`UPDATE users SET telegram_bonus_granted_at = now() WHERE id = $1`, [user.id]);
 
       // Conta liberada pelo admin (com ou sem prazo) não mexe em dias — só
@@ -74,8 +74,11 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
       // Achado real: uma conta "granted" sem prazo (trial_ends_at NULL,
       // acesso permanente) caía no cálculo abaixo com base=hoje, e o
       // acesso permanente virava um prazo de só 5 dias — pior que não dar
-      // bônus nenhum.
-      if (sub.status === "granted") {
+      // bônus nenhum. Estorno e chargeback também ficam de fora: o
+      // pagamento voltou (ou está em disputa), então dar acesso de volta só
+      // por vincular o Telegram, sem checar o pagamento, seria um jeito de
+      // burlar o bloqueio (achado em auditoria).
+      if (sub.status === "granted" || sub.status === "refunded" || sub.status === "chargeback") {
         return { result: "not_eligible" as const };
       }
 
@@ -95,8 +98,8 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
           sub.id,
         ]);
       } else {
-        // expirado/aguardando pagamento/sem assinatura ativa — um empurrão
-        // de boas-vindas pra pessoa voltar a usar.
+        // pending/past_due/expired — um empurrão de boas-vindas pra pessoa
+        // voltar a usar (refunded/chargeback já foram excluídos acima).
         const trialEndsAt = new Date();
         trialEndsAt.setDate(trialEndsAt.getDate() + LINK_BONUS_DAYS);
         await tx.get(
@@ -125,6 +128,11 @@ export const POST = withApiErrors("telegram.webhook.POST", async (req: NextReque
     } else if (linked?.result === "not_eligible") {
       await sendTelegramAlert(
         "✅ Telegram vinculado com sucesso! Sua conta já tem acesso liberado pelo suporte, então não recebe o bônus de dias.",
+        String(chatId)
+      );
+    } else if (linked?.result === "no_subscription") {
+      await sendTelegramAlert(
+        "✅ Telegram vinculado com sucesso! Sua conta não tem assinatura, então o bônus de dias não se aplica.",
         String(chatId)
       );
     } else if (linked) {
