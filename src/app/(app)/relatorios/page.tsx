@@ -29,9 +29,13 @@ function formatDate(iso: string) {
   return `${d}/${m}`;
 }
 
+// Dia local (fuso do navegador), não UTC — new Date().toISOString() sempre
+// reflete UTC, o que inflava em +1 os buckets de dívida por atraso durante
+// as últimas horas do dia no horário de Brasília (achado em auditoria).
 function daysSince(iso: string) {
   const saleDate = new Date(iso.split("T")[0] + "T00:00:00");
-  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((today.getTime() - saleDate.getTime()) / 86400000);
 }
 

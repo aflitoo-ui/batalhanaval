@@ -15,9 +15,13 @@ type SaleDate = { customerId: number | null; saleDate: string };
 
 const INACTIVE_DAYS_THRESHOLD = 30;
 
+// Dia local (fuso do navegador), não UTC — evita inflar em +1 a inatividade
+// de clientes nas últimas horas do dia no horário de Brasília (achado em
+// auditoria).
 function daysSince(iso: string) {
   const d = new Date(iso.split("T")[0] + "T00:00:00");
-  const today = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00");
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return Math.round((today.getTime() - d.getTime()) / 86400000);
 }
 

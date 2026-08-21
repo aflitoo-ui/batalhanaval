@@ -18,6 +18,17 @@ export type AccessStatus = {
   daysLeft?: number;
 };
 
+// "Hoje" no fuso do negócio (Brasil), como string YYYY-MM-DD. current_period_end
+// é uma coluna DATE (sem hora) — o driver pg a converte pra um Date do JS
+// interpretando os componentes no fuso horário do PROCESSO Node, não do
+// negócio. Em produção (serverless, comumente TZ=UTC), isso cortaria o
+// acesso ~3h antes da meia-noite real em horário de Brasília (achado em
+// auditoria). Comparar como string de dia, calculada explicitamente no
+// fuso certo, elimina essa dependência da config do servidor.
+function todaySaoPauloISO(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
 export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> {
   if (user.role === "admin") return { allowed: true, status: "active" };
 
@@ -26,7 +37,7 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
     trialEndsAt: string | null;
     currentPeriodEnd: string | null;
   }>(
-    `SELECT status, trial_ends_at as "trialEndsAt", current_period_end as "currentPeriodEnd"
+    `SELECT status, trial_ends_at as "trialEndsAt", to_char(current_period_end, 'YYYY-MM-DD') as "currentPeriodEnd"
      FROM subscriptions WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
     [user.id]
   );
@@ -78,9 +89,16 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
   if (sub.status === "active" || sub.status === "canceled") {
     // "canceled" ainda libera acesso até o fim do período já pago — só
     // deixa de renovar depois disso, não corta o que já foi pago.
-    const periodEnd = sub.currentPeriodEnd ? new Date(sub.currentPeriodEnd) : null;
-    if (!periodEnd || periodEnd.getTime() >= Date.now()) {
-      const daysLeft = periodEnd ? Math.ceil((periodEnd.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : undefined;
+    // Comparação por string de dia (não timestamp) — ver todaySaoPauloISO.
+    const today = todaySaoPauloISO();
+    const stillValid = !sub.currentPeriodEnd || sub.currentPeriodEnd >= today;
+    if (stillValid) {
+      const daysLeft = sub.currentPeriodEnd
+        ? Math.ceil(
+            (new Date(`${sub.currentPeriodEnd}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) /
+              (24 * 60 * 60 * 1000)
+          )
+        : undefined;
       // Só avisa quando está perto de vencer (ou já cancelada, que sempre
       // tem um fim definido) — não fica mostrando contador o mês inteiro.
       const showDaysLeft = sub.status === "canceled" || (daysLeft !== undefined && daysLeft <= 5);
