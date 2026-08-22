@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { useStandalone } from "@/lib/useStandalone";
 
-const DISMISS_KEY = "strix_install_dismissed";
+const DISMISS_KEY = "strix_install_dismissed_at";
+// iOS não expõe nenhuma forma de saber se o site já tem ícone na tela
+// inicial — quem instalou mas volta a abrir pelo Safari (em vez do ícone)
+// não tem como ser diferenciado de quem nunca instalou. Um dismiss
+// permanente arriscava enterrar o convite pra quem ainda não instalou; um
+// dismiss só até o próximo login incomodava demais quem já instalou.
+// Meio-termo: some por alguns dias, reaparece depois.
+const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -20,7 +27,8 @@ export function InstallBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
+    const dismissedAt = Number(localStorage.getItem(DISMISS_KEY));
+    setDismissed(Boolean(dismissedAt) && Date.now() - dismissedAt < SNOOZE_MS);
     setIsIos(/iPhone|iPad|iPod/.test(window.navigator.userAgent));
 
     function onBeforeInstallPrompt(e: Event) {
@@ -32,7 +40,7 @@ export function InstallBanner() {
   }, []);
 
   function dismiss() {
-    sessionStorage.setItem(DISMISS_KEY, "1");
+    localStorage.setItem(DISMISS_KEY, String(Date.now()));
     setDismissed(true);
   }
 

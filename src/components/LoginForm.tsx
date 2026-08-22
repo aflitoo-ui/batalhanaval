@@ -37,7 +37,6 @@ export function LoginForm() {
         return;
       }
       sessionStorage.removeItem("strix_banner_seen");
-      sessionStorage.removeItem("strix_install_dismissed");
       localStorage.setItem("strix_last_activity", String(Date.now()));
       // Admin não tem vendas/produtos/clientes próprios — a tela de Vendas
       // fica sempre vazia pra ele. Cai direto na área administrativa.
