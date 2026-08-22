@@ -61,7 +61,8 @@ export function InstallBanner() {
         {isIos ? (
           <ol className="mt-1 space-y-0.5 text-xs text-zinc-400">
             <li>1. Toque em Compartilhar (⬆)</li>
-            <li>2. &quot;Adicionar à Tela de Início&quot;</li>
+            <li>2. Toque em &quot;Ver Mais&quot;</li>
+            <li>3. &quot;Adicionar à Tela de Início&quot;</li>
           </ol>
         ) : (
           <>
