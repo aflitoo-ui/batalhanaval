@@ -17,7 +17,7 @@ type InviteRow = {
 const OWN_ACCOUNTS = new Set(["test", "aflitoo"]);
 
 function referrerLabel(email: string) {
-  return OWN_ACCOUNTS.has(email) ? "Convidado" : email;
+  return OWN_ACCOUNTS.has(email) ? "Interno" : email;
 }
 
 function formatDateTime(iso: string) {
