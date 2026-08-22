@@ -10,7 +10,7 @@ const DISMISS_KEY = "strix_install_dismissed_at";
 // permanente arriscava enterrar o convite pra quem ainda não instalou; um
 // dismiss só até o próximo login incomodava demais quem já instalou.
 // Meio-termo: some por alguns dias, reaparece depois.
-const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
+const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
