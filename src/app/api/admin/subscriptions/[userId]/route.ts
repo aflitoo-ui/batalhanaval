@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { logAdminAction } from "@/lib/adminLog";
 import { grantInviteCreditOnce } from "@/lib/invites";
+import { getPaymentProvider } from "@/lib/payments";
 import { z } from "zod";
 
 const bodySchema = z.object({
@@ -75,8 +76,8 @@ export const PATCH = withApiErrors(
       return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
     }
 
-    const sub = await get<{ id: number }>(
-      `SELECT id FROM subscriptions WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
+    const sub = await get<{ id: number; status: string; providerSubscriptionId: string | null }>(
+      `SELECT id, status, provider_subscription_id as "providerSubscriptionId" FROM subscriptions WHERE user_id = $1 ORDER BY id DESC LIMIT 1`,
       [userId]
     );
     if (!sub) return NextResponse.json({ error: "Usuário sem assinatura." }, { status: 404 });
@@ -93,29 +94,52 @@ export const PATCH = withApiErrors(
     }
 
     // Estende o período de uma assinatura real (active/canceled com saldo)
-    // sem mexer no status — pra pagamento combinado por fora do gateway
-    // (ex: Pix direto). Diferente de "grant": não vira 'granted', continua
-    // sob controle normal do Asaas. Estende a partir do maior entre o
-    // período atual e hoje, nunca do zero — mesma lógica do webhook, pra
-    // nunca encolher nem duplicar prazo.
+    // pra pagamento combinado por fora do gateway (ex: Pix direto). Estende
+    // a partir do maior entre o período atual e hoje, nunca do zero — mesma
+    // lógica do webhook, pra nunca encolher nem duplicar prazo.
+    //
+    // Se a assinatura ainda está 'active', ela tem cobrança recorrente de
+    // verdade rodando no Asaas — sem cancelar isso, o Asaas ia continuar
+    // tentando cobrar no ciclo normal dela, mesmo com os dias extras aqui.
+    // Por isso, estender uma conta 'active' cancela a cobrança no Asaas e
+    // vira 'canceled' (mesma chamada que o botão de cancelamento do próprio
+    // cliente usa) — é o status certo pra "pago até tal data, sem renovar
+    // sozinho", e que também já não fica avisando (ver AppShell.tsx).
     if (parsed.data.action === "extend") {
       if (!parsed.data.days) {
         return NextResponse.json({ error: "Informe quantos dias adicionar." }, { status: 400 });
       }
-      await run(
-        `UPDATE subscriptions
-         SET current_period_end = GREATEST(COALESCE(current_period_end, CURRENT_DATE), CURRENT_DATE) + make_interval(days => $2),
-             updated_at = now()
-         WHERE id = $1`,
-        [sub.id, parsed.data.days]
-      );
+      if (sub.status === "active") {
+        if (sub.providerSubscriptionId) {
+          await getPaymentProvider().cancelSubscription(sub.providerSubscriptionId);
+        }
+        await run(
+          `UPDATE subscriptions
+           SET status = 'canceled', canceled_at = now(),
+               current_period_end = GREATEST(COALESCE(current_period_end, CURRENT_DATE), CURRENT_DATE) + make_interval(days => $2),
+               updated_at = now()
+           WHERE id = $1`,
+          [sub.id, parsed.data.days]
+        );
+      } else {
+        await run(
+          `UPDATE subscriptions
+           SET current_period_end = GREATEST(COALESCE(current_period_end, CURRENT_DATE), CURRENT_DATE) + make_interval(days => $2),
+               updated_at = now()
+           WHERE id = $1`,
+          [sub.id, parsed.data.days]
+        );
+      }
       await logAdminAction({
         adminId: admin.id,
         action: "extend_period",
         targetUserId: Number(userId),
-        details: `período estendido em ${parsed.data.days} dias`,
+        details:
+          sub.status === "active"
+            ? `período estendido em ${parsed.data.days} dias (cobrança recorrente cancelada no Asaas)`
+            : `período estendido em ${parsed.data.days} dias`,
       });
-      return NextResponse.json({ ok: true, status: "extended" });
+      return NextResponse.json({ ok: true, status: sub.status === "active" ? "canceled" : sub.status });
     }
 
     // "grant" com dias definido reaproveita trial_ends_at como prazo do

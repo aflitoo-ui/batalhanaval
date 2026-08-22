@@ -398,29 +398,37 @@ export function UsuariosClient() {
       );
     }
     if (grantId === u.id) {
+      const extendingActive = grantMode === "extend" && subStatusByUser[u.id]?.status === "active";
       return (
-        <div className={`flex flex-wrap items-center ${justify} gap-2`}>
-          <input
-            value={grantDays}
-            onChange={(e) => setGrantDays(e.target.value)}
-            className="input w-24 py-1"
-            placeholder={grantMode === "extend" ? "dias a somar" : "dias (vazio = sempre)"}
-            inputMode="numeric"
-            autoFocus
-          />
-          <button onClick={() => handleGrant(u)} className="rounded-md px-2 py-1 text-sm font-medium text-emerald-400 transition hover:bg-zinc-800 hover:text-emerald-300">
-            {grantMode === "extend" ? "estender" : subStatusByUser[u.id]?.status === "granted" ? "salvar" : "liberar"}
-          </button>
-          <button
-            onClick={() => {
-              setGrantId(null);
-              setGrantDays("");
-              setGrantMode("grant");
-            }}
-            className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
-          >
-            cancelar
-          </button>
+        <div className={`flex flex-col ${align === "end" ? "items-end" : "items-start"} gap-1`}>
+          <div className={`flex flex-wrap items-center ${justify} gap-2`}>
+            <input
+              value={grantDays}
+              onChange={(e) => setGrantDays(e.target.value)}
+              className="input w-24 py-1"
+              placeholder={grantMode === "extend" ? "dias a somar" : "dias (vazio = sempre)"}
+              inputMode="numeric"
+              autoFocus
+            />
+            <button onClick={() => handleGrant(u)} className="rounded-md px-2 py-1 text-sm font-medium text-emerald-400 transition hover:bg-zinc-800 hover:text-emerald-300">
+              {grantMode === "extend" ? "estender" : subStatusByUser[u.id]?.status === "granted" ? "salvar" : "liberar"}
+            </button>
+            <button
+              onClick={() => {
+                setGrantId(null);
+                setGrantDays("");
+                setGrantMode("grant");
+              }}
+              className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
+            >
+              cancelar
+            </button>
+          </div>
+          {extendingActive && (
+            <p className="max-w-[220px] text-xs text-amber-500">
+              Isso cancela a cobrança recorrente no Asaas — ela para de ser cobrada, e o acesso segue até o novo prazo.
+            </p>
+          )}
         </div>
       );
     }
