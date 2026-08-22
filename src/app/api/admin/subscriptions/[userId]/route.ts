@@ -7,7 +7,7 @@ import { grantInviteCreditOnce } from "@/lib/invites";
 import { z } from "zod";
 
 const bodySchema = z.object({
-  action: z.enum(["grant", "revoke"]),
+  action: z.enum(["grant", "revoke", "extend"]),
   days: z.number().int().positive().max(3650).optional(),
 });
 
@@ -90,6 +90,32 @@ export const PATCH = withApiErrors(
         details: "revogado",
       });
       return NextResponse.json({ ok: true, status: "expired" });
+    }
+
+    // Estende o período de uma assinatura real (active/canceled com saldo)
+    // sem mexer no status — pra pagamento combinado por fora do gateway
+    // (ex: Pix direto). Diferente de "grant": não vira 'granted', continua
+    // sob controle normal do Asaas. Estende a partir do maior entre o
+    // período atual e hoje, nunca do zero — mesma lógica do webhook, pra
+    // nunca encolher nem duplicar prazo.
+    if (parsed.data.action === "extend") {
+      if (!parsed.data.days) {
+        return NextResponse.json({ error: "Informe quantos dias adicionar." }, { status: 400 });
+      }
+      await run(
+        `UPDATE subscriptions
+         SET current_period_end = GREATEST(COALESCE(current_period_end, CURRENT_DATE), CURRENT_DATE) + make_interval(days => $2),
+             updated_at = now()
+         WHERE id = $1`,
+        [sub.id, parsed.data.days]
+      );
+      await logAdminAction({
+        adminId: admin.id,
+        action: "extend_period",
+        targetUserId: Number(userId),
+        details: `período estendido em ${parsed.data.days} dias`,
+      });
+      return NextResponse.json({ ok: true, status: "extended" });
     }
 
     // "grant" com dias definido reaproveita trial_ends_at como prazo do

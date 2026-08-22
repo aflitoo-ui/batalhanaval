@@ -109,6 +109,10 @@ export function UsuariosClient() {
   const [search, setSearch] = useState("");
   const [grantId, setGrantId] = useState<number | null>(null);
   const [grantDays, setGrantDays] = useState("");
+  // "grant" = liberação de cortesia (vira status 'granted', sem cobrança).
+  // "extend" = soma dias numa assinatura real (active/canceled com saldo),
+  // sem mexer no status — pra pagamento combinado por fora do gateway.
+  const [grantMode, setGrantMode] = useState<"grant" | "extend">("grant");
   const [inviteGrantId, setInviteGrantId] = useState<number | null>(null);
   const [inviteGrantQty, setInviteGrantQty] = useState("1");
   const [historyUserId, setHistoryUserId] = useState<number | null>(null);
@@ -228,14 +232,15 @@ export function UsuariosClient() {
   async function handleGrant(u: User) {
     setRowError(null);
     const days = grantDays.trim() ? Number(grantDays) : undefined;
-    if (grantDays.trim() && (!Number.isInteger(days) || (days as number) <= 0)) {
+    const daysRequired = grantMode === "extend";
+    if ((daysRequired && !grantDays.trim()) || (grantDays.trim() && (!Number.isInteger(days) || (days as number) <= 0))) {
       setRowError({ id: u.id, message: "Informe um número de dias válido." });
       return;
     }
     const res = await fetch(`/api/admin/subscriptions/${u.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "grant", ...(days ? { days } : {}) }),
+      body: JSON.stringify({ action: grantMode, ...(days ? { days } : {}) }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
@@ -244,6 +249,7 @@ export function UsuariosClient() {
     }
     setGrantId(null);
     setGrantDays("");
+    setGrantMode("grant");
     load();
   }
 
@@ -398,17 +404,18 @@ export function UsuariosClient() {
             value={grantDays}
             onChange={(e) => setGrantDays(e.target.value)}
             className="input w-24 py-1"
-            placeholder="dias (vazio = sempre)"
+            placeholder={grantMode === "extend" ? "dias a somar" : "dias (vazio = sempre)"}
             inputMode="numeric"
             autoFocus
           />
           <button onClick={() => handleGrant(u)} className="rounded-md px-2 py-1 text-sm font-medium text-emerald-400 transition hover:bg-zinc-800 hover:text-emerald-300">
-            {subStatusByUser[u.id]?.status === "granted" ? "salvar" : "liberar"}
+            {grantMode === "extend" ? "estender" : subStatusByUser[u.id]?.status === "granted" ? "salvar" : "liberar"}
           </button>
           <button
             onClick={() => {
               setGrantId(null);
               setGrantDays("");
+              setGrantMode("grant");
             }}
             className="rounded-md px-2 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
           >
@@ -522,6 +529,7 @@ export function UsuariosClient() {
                   onClick={() => {
                     const days = subStatusByUser[u.id]?.daysLeft;
                     setGrantDays(days ? String(days) : "");
+                    setGrantMode("grant");
                     setGrantId(u.id);
                     setMenuAnchor(null);
                   }}
@@ -538,10 +546,26 @@ export function UsuariosClient() {
                   revogar liberação
                 </MenuItem>
               </>
-            ) : accessStatus === "active" || (accessStatus === "canceled" && (subStatusByUser[u.id]?.daysLeft ?? 0) > 0) ? null : (
+            ) : accessStatus === "active" || (accessStatus === "canceled" && (subStatusByUser[u.id]?.daysLeft ?? 0) > 0) ? (
+              // Assinatura real (paga via Asaas) ainda com saldo — não dá pra
+              // usar "liberar acesso" aqui (viraria 'granted' e perderia o
+              // vínculo com a cobrança). Isso só soma dias no período, pra
+              // pagamento combinado por fora do gateway (ex: Pix direto).
+              <MenuItem
+                onClick={() => {
+                  setGrantDays("");
+                  setGrantMode("extend");
+                  setGrantId(u.id);
+                  setMenuAnchor(null);
+                }}
+              >
+                estender período
+              </MenuItem>
+            ) : (
               <MenuItem
                 tone="success"
                 onClick={() => {
+                  setGrantMode("grant");
                   setGrantId(u.id);
                   setMenuAnchor(null);
                 }}

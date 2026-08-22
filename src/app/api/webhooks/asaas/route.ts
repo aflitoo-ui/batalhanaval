@@ -40,8 +40,9 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
       [eventId, rawBody]
     );
 
-    const sub = await tx.get<{ id: number; userId: number; email: string }>(
-      `SELECT s.id, s.user_id as "userId", u.email FROM subscriptions s
+    const sub = await tx.get<{ id: number; userId: number; email: string; currentPeriodEnd: string | null }>(
+      `SELECT s.id, s.user_id as "userId", u.email, to_char(s.current_period_end, 'YYYY-MM-DD') as "currentPeriodEnd"
+       FROM subscriptions s
        JOIN users u ON u.id = s.user_id
        WHERE s.provider_subscription_id = $1`,
       [event.providerSubscriptionId]
@@ -50,8 +51,16 @@ export const POST = withApiErrors("webhooks.asaas.POST", async (req: NextRequest
 
     switch (event.type) {
       case "payment_approved": {
-        const nextPeriodEnd = new Date(event.paidAt);
-        nextPeriodEnd.setDate(nextPeriodEnd.getDate() + 30);
+        // Estende a partir do MAIOR entre o período atual e a data do
+        // pagamento — nunca a partir do zero. Sem isso, qualquer dia extra
+        // já concedido (pagamento adiantado, ou uma extensão manual de
+        // admin) simplesmente sumia na próxima renovação, porque a conta
+        // antiga ignorava o que já estava salvo.
+        const currentEnd = sub.currentPeriodEnd ? new Date(`${sub.currentPeriodEnd}T00:00:00Z`) : null;
+        const paidAt = new Date(event.paidAt);
+        const base = currentEnd && currentEnd > paidAt ? currentEnd : paidAt;
+        const nextPeriodEnd = new Date(base);
+        nextPeriodEnd.setUTCDate(nextPeriodEnd.getUTCDate() + 30);
         await tx.get(
           `UPDATE subscriptions SET status = 'active', current_period_end = $1, updated_at = now() WHERE id = $2`,
           [nextPeriodEnd.toISOString().slice(0, 10), sub.id]

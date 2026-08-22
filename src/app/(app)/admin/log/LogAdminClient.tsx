@@ -14,6 +14,7 @@ type LogRow = {
 const ACTION_LABEL: Record<string, string> = {
   grant_access: "Liberou acesso",
   revoke_access: "Revogou acesso",
+  extend_period: "Estendeu período de assinatura",
   create_user: "Criou usuário",
   deactivate_user: "Desativou usuário",
   reactivate_user: "Reativou usuário",
