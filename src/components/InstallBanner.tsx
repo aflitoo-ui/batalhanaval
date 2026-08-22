@@ -20,7 +20,7 @@ export function InstallBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
+    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
     setIsIos(/iPhone|iPad|iPod/.test(window.navigator.userAgent));
 
     function onBeforeInstallPrompt(e: Event) {
@@ -32,7 +32,7 @@ export function InstallBanner() {
   }, []);
 
   function dismiss() {
-    localStorage.setItem(DISMISS_KEY, "1");
+    sessionStorage.setItem(DISMISS_KEY, "1");
     setDismissed(true);
   }
 
