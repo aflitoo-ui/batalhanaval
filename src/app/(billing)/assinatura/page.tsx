@@ -285,12 +285,6 @@ export default function AssinaturaPage() {
         </div>
         <div className="flex items-center gap-1">
           {email && <span className="mr-1 truncate text-sm text-zinc-500">{email}</span>}
-          <Link
-            href="/sobre"
-            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-zinc-200"
-          >
-            Sobre
-          </Link>
           <a
             href="https://t.me/nick_ki"
             target="_blank"
@@ -577,6 +571,16 @@ export default function AssinaturaPage() {
           )}
         </div>
       )}
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+        <h2 className="mb-3 text-sm font-semibold text-zinc-200">Sobre o STRIX</h2>
+        <Link
+          href="/sobre"
+          className="inline-block rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+        >
+          O que é o STRIX
+        </Link>
+      </div>
     </div>
   );
 }
