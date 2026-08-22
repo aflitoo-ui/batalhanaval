@@ -8,6 +8,7 @@ import { useIdleLogout } from "@/lib/useIdleLogout";
 import { useStandalone } from "@/lib/useStandalone";
 import PullToRefresh from "@/components/PullToRefresh";
 import TelegramLinkPopup from "@/components/TelegramLinkPopup";
+import { InstallBanner } from "@/components/InstallBanner";
 
 const TAB_ICONS: Record<string, React.ReactNode> = {
   "/": (
@@ -347,6 +348,7 @@ export default function AppShell({
           </div>
         )}
       </header>
+      <InstallBanner />
       <PullToRefresh>
         <main className={`mx-auto max-w-6xl px-4 py-6 ${isStandalone ? "pb-[calc(64px+env(safe-area-inset-bottom))]" : ""}`}>
           {children}
