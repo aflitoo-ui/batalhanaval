@@ -10,6 +10,16 @@ type InviteRow = {
   usedByEmail: string;
 };
 
+// Contas pessoais/de teste do próprio dono do sistema — não é apadrinhamento
+// de verdade, é só a conta usada pra gerar o convite. Mostrar o login real
+// aqui não ajuda em nada (é sempre a mesma pessoa), então some atrás de um
+// rótulo genérico.
+const OWN_ACCOUNTS = new Set(["test", "aflitoo"]);
+
+function referrerLabel(email: string) {
+  return OWN_ACCOUNTS.has(email) ? "Convidado" : email;
+}
+
 function formatDateTime(iso: string) {
   const d = new Date(iso);
   const date = d.toLocaleDateString("pt-BR");
@@ -31,10 +41,15 @@ export function ConvitesAdminClient() {
   }, []);
 
   // Ranking de quem mais indicou, calculado em cima da mesma lista — não
-  // precisa de outra consulta, são no máximo 200 linhas.
+  // precisa de outra consulta, são no máximo 200 linhas. Contas próprias
+  // ficam de fora do ranking: não é uma indicação de verdade competindo
+  // com clientes reais, é sempre a mesma pessoa (o dono do sistema).
   const topReferrers = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const r of rows) counts.set(r.referrerEmail, (counts.get(r.referrerEmail) || 0) + 1);
+    for (const r of rows) {
+      if (OWN_ACCOUNTS.has(r.referrerEmail)) continue;
+      counts.set(r.referrerEmail, (counts.get(r.referrerEmail) || 0) + 1);
+    }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
   }, [rows]);
 
@@ -78,7 +93,7 @@ export function ConvitesAdminClient() {
                   <span className="shrink-0 text-xs text-zinc-500">{formatDateTime(r.usedAt)}</span>
                 </div>
                 <p className="mt-1 text-xs text-zinc-500">
-                  padrinho: <span className="text-zinc-300">{r.referrerEmail}</span>
+                  padrinho: <span className="text-zinc-300">{referrerLabel(r.referrerEmail)}</span>
                 </p>
               </div>
             ))}
@@ -98,7 +113,7 @@ export function ConvitesAdminClient() {
                 {rows.map((r) => (
                   <tr key={r.id} className="border-b border-zinc-900 last:border-0">
                     <td className="px-4 py-2 text-zinc-400">{formatDateTime(r.usedAt)}</td>
-                    <td className="px-4 py-2 text-zinc-300">{r.referrerEmail}</td>
+                    <td className="px-4 py-2 text-zinc-300">{referrerLabel(r.referrerEmail)}</td>
                     <td className="px-4 py-2 font-medium text-zinc-200">{r.usedByEmail}</td>
                   </tr>
                 ))}
