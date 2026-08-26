@@ -424,6 +424,11 @@ export default function RelatoriosPage() {
       </div>
 
       <Panel title="Dívida em aberto por idade">
+        <p className="-mt-2 mb-3 text-xs text-zinc-500">
+          Essa dívida reflete a situação atual do seu negócio: inclui vendas de qualquer mês, mesmo as de fora do
+          período selecionado. Por isso o total pode ser diferente do &quot;A receber&quot; ali em cima, que soma só
+          as vendas do mês que você está vendo.
+        </p>
         {debtAging.every((b) => b.total === 0) ? (
           <p className="py-2 text-sm text-zinc-500">Ninguém deve nada no momento.</p>
         ) : (
