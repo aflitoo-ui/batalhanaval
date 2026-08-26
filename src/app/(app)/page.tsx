@@ -283,7 +283,11 @@ function VendasPageInner() {
       (acc, s) => ({
         total: acc.total + s.total,
         paid: acc.paid + s.paid,
-        owed: acc.owed + s.owed,
+        // Math.max(0, s.owed): uma venda paga a mais (owed negativo) é
+        // crédito daquele cliente específico, não pode abater a dívida de
+        // outro cliente na soma geral — nem liberar o "arquivar mês" com
+        // dívida real de outra pessoa escondida atrás desse crédito.
+        owed: acc.owed + Math.max(0, s.owed),
         profit: acc.profit + s.profit,
       }),
       { total: 0, paid: 0, owed: 0, profit: 0 }

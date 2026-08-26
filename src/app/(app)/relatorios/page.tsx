@@ -285,7 +285,11 @@ export default function RelatoriosPage() {
   const totals = useMemo(
     () =>
       periodSales.reduce(
-        (acc, s) => ({ revenue: acc.revenue + s.total, profit: acc.profit + s.profit, owed: acc.owed + s.owed }),
+        // Math.max(0, s.owed): uma venda paga a mais (owed negativo) é um
+        // crédito daquele cliente específico, não pode abater a dívida de
+        // outro cliente na soma geral (achado em auditoria: um pagamento a
+        // mais de R$10 escondia R$10 de dívida real de outra pessoa).
+        (acc, s) => ({ revenue: acc.revenue + s.total, profit: acc.profit + s.profit, owed: acc.owed + Math.max(0, s.owed) }),
         { revenue: 0, profit: 0, owed: 0 }
       ),
     [periodSales]
