@@ -22,10 +22,14 @@ export function useIdleLogout(timeoutMs: number) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    async function logout() {
-      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    function logout() {
+      // Troca a tela primeiro, sem esperar a rede — só o front decide se
+      // desloga (baseado no tempo parado), então não faz sentido a pessoa
+      // continuar vendo a tela anterior por 1-2s enquanto o fetch abaixo
+      // ainda não voltou. Avisa o servidor em segundo plano, sem bloquear.
       router.push("/login");
       router.refresh();
+      void fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     }
 
     function markActivity() {
@@ -46,14 +50,14 @@ export function useIdleLogout(timeoutMs: number) {
     function onVisibilityChange() {
       if (document.visibilityState !== "visible") return;
       if (elapsedTooLong()) {
-        void logout();
+        logout();
       } else {
         resetTimer();
       }
     }
 
     if (elapsedTooLong()) {
-      void logout();
+      logout();
     } else {
       resetTimer();
     }
