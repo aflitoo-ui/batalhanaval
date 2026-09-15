@@ -7,6 +7,23 @@ import { useIdleLogout } from "@/lib/useIdleLogout";
 
 const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 
+// Formata progressivamente enquanto digita: CPF (000.000.000-00) até 11
+// dígitos, CNPJ (00.000.000/0000-00) a partir do 12º — o valor guardado no
+// estado continua só dígitos, isso é só exibição.
+function formatCpfCnpj(digits: string) {
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
 type AccessStatus = {
   allowed: boolean;
   status:
@@ -373,11 +390,12 @@ export default function AssinaturaPage() {
               <div className="mt-3">
                 <label className="mb-1 block text-xs font-medium text-zinc-400">CPF ou CNPJ (necessário pra gerar o pagamento)</label>
                 <input
-                  value={cpfCnpj}
-                  onChange={(e) => setCpfCnpj(e.target.value)}
+                  value={formatCpfCnpj(cpfCnpj)}
+                  onChange={(e) => setCpfCnpj(e.target.value.replace(/\D/g, "").slice(0, 14))}
                   className="input max-w-xs"
-                  placeholder="Só números"
+                  placeholder="000.000.000-00"
                   inputMode="numeric"
+                  maxLength={18}
                   autoFocus
                 />
               </div>
