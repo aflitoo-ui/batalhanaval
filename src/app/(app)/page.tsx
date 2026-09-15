@@ -96,6 +96,13 @@ function inMonth(s: Sale, year: number, month: number) {
   return y === year && m === month + 1;
 }
 
+// Identidade do cliente pra comparar "é a mesma pessoa" — por id quando
+// cadastrado, senão pelo nome (mesmo critério do agrupamento em Relatórios
+// e do mobile).
+function customerKey(s: Sale) {
+  return s.customerId != null ? `id:${s.customerId}` : `name:${s.customerName || ""}`;
+}
+
 
 const MONTH_NAMES = [
   "Janeiro",
@@ -294,6 +301,50 @@ function VendasPageInner() {
     );
   }, [filteredSales]);
 
+  // Seleção múltipla pra quitar várias vendas do MESMO cliente de uma vez —
+  // por id de venda, nunca por índice (a lista reordena/filtra). Espelha o
+  // app mobile.
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [confirmQuitarSales, setConfirmQuitarSales] = useState<Sale[] | null>(null);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setSelectionError(null);
+  }, [q, onlyOwed, viewMonth]);
+
+  const debtSales = useMemo(() => filteredSales.filter((s) => s.owed > 0.001), [filteredSales]);
+
+  // Card "A receber" só vira atalho de quitar tudo quando toda a dívida
+  // visível (busca/filtro atual) é da mesma pessoa — evita misturar
+  // clientes diferentes numa única confirmação.
+  const singleDebtor = useMemo(() => {
+    if (debtSales.length === 0) return null;
+    const key = customerKey(debtSales[0]);
+    return debtSales.every((s) => customerKey(s) === key) ? debtSales[0] : null;
+  }, [debtSales]);
+
+  function toggleSelect(sale: Sale) {
+    if (sale.owed <= 0.001) return;
+    setSelectionError(null);
+    setSelectedIds((cur) => {
+      if (cur.has(sale.id)) {
+        const next = new Set(cur);
+        next.delete(sale.id);
+        return next;
+      }
+      const already = visibleSales.find((s) => cur.has(s.id));
+      if (already && customerKey(already) !== customerKey(sale)) {
+        setSelectionError("Só dá pra quitar várias vendas juntas quando são do mesmo cliente.");
+        return cur;
+      }
+      return new Set(cur).add(sale.id);
+    });
+  }
+
+  const selectedSales = useMemo(() => visibleSales.filter((s) => selectedIds.has(s.id)), [visibleSales, selectedIds]);
+  const selectedTotal = useMemo(() => selectedSales.reduce((sum, s) => sum + s.owed, 0), [selectedSales]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -381,7 +432,13 @@ function VendasPageInner() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="Total vendido" value={formatBRL(totals.total)} />
         <SummaryCard label="Recebido" value={formatBRL(totals.paid)} tone="emerald" />
-        <SummaryCard label="A receber" value={formatBRL(totals.owed)} tone="red" />
+        <SummaryCard
+          label="A receber"
+          value={formatBRL(totals.owed)}
+          tone="red"
+          onClick={singleDebtor ? () => setConfirmQuitarSales(debtSales) : undefined}
+          hint={singleDebtor ? "toque pra quitar tudo" : undefined}
+        />
         <SummaryCard label="Lucro" value={formatBRL(totals.profit)} tone="emerald" />
       </div>
 
@@ -457,14 +514,42 @@ function VendasPageInner() {
               <div
                 key={s.id}
                 onClick={() => router.push(`/venda/${s.id}`)}
-                className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 active:bg-zinc-800/50"
+                className={`rounded-lg border p-3 active:bg-zinc-800/50 ${
+                  selectedIds.has(s.id) ? "border-emerald-600 bg-zinc-800" : "border-zinc-800 bg-zinc-900"
+                }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-amber-400">{s.customerName}</p>
-                    <p className="text-xs text-zinc-500">
-                      {formatDate(s.saleDate)} · {s.productName} · {s.quantity}x
-                    </p>
+                  <div className="flex items-start gap-2">
+                    {s.owed > 0.001 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelect(s);
+                        }}
+                        aria-label={selectedIds.has(s.id) ? "Desmarcar venda" : "Selecionar venda"}
+                        className="mt-0.5 shrink-0"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className={`h-5 w-5 ${selectedIds.has(s.id) ? "text-emerald-400" : "text-zinc-600"}`}
+                          fill={selectedIds.has(s.id) ? "currentColor" : "none"}
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          {selectedIds.has(s.id) ? (
+                            <path d="M9 12.5l2 2 4-5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
+                          ) : (
+                            <circle cx="12" cy="12" r="9" />
+                          )}
+                        </svg>
+                      </button>
+                    )}
+                    <div>
+                      <p className="font-medium text-amber-400">{s.customerName}</p>
+                      <p className="text-xs text-zinc-500">
+                        {formatDate(s.saleDate)} · {s.productName} · {s.quantity}x
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
@@ -503,6 +588,7 @@ function VendasPageInner() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-zinc-800 bg-zinc-900 text-left text-xs uppercase tracking-wide text-zinc-500">
+                  <th className="w-8 px-3 py-2"></th>
                   <th className="px-3 py-2">Data</th>
                   <th className="px-3 py-2">Produto</th>
                   <th className="px-3 py-2 text-right">Qtd</th>
@@ -520,8 +606,35 @@ function VendasPageInner() {
                   <tr
                     key={s.id}
                     onClick={() => router.push(`/venda/${s.id}`)}
-                    className="cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50"
+                    className={`cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50 ${
+                      selectedIds.has(s.id) ? "bg-zinc-800/60" : ""
+                    }`}
                   >
+                    <td className="px-3 py-2">
+                      {s.owed > 0.001 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelect(s);
+                          }}
+                          aria-label={selectedIds.has(s.id) ? "Desmarcar venda" : "Selecionar venda"}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            className={`h-4 w-4 ${selectedIds.has(s.id) ? "text-emerald-400" : "text-zinc-600"}`}
+                            fill={selectedIds.has(s.id) ? "currentColor" : "none"}
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            {selectedIds.has(s.id) ? (
+                              <path d="M9 12.5l2 2 4-5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
+                            ) : (
+                              <circle cx="12" cy="12" r="9" />
+                            )}
+                          </svg>
+                        </button>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
                     <td className="px-3 py-2 font-medium text-zinc-200">
                       {s.productName}
@@ -569,7 +682,47 @@ function VendasPageInner() {
               Ver mais ({filteredSales.length - visibleSales.length} restantes)
             </button>
           )}
+
+          {selectionError && <p className="text-center text-xs text-amber-400">{selectionError}</p>}
         </>
+      )}
+
+      {selectedSales.length > 0 && (
+        <div
+          className="fixed inset-x-4 z-30 flex items-center gap-3 rounded-lg border border-emerald-700 bg-zinc-900 p-3 shadow-lg shadow-black/40"
+          style={{ bottom: isStandalone ? "calc(64px + env(safe-area-inset-bottom) + 16px)" : "1rem" }}
+        >
+          <button onClick={() => setSelectedIds(new Set())} aria-label="Cancelar seleção" className="text-zinc-500 hover:text-zinc-300">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+          <div className="flex-1">
+            <p className="text-xs text-zinc-400">
+              {selectedSales.length} venda{selectedSales.length === 1 ? "" : "s"} selecionada
+              {selectedSales.length === 1 ? "" : "s"}
+            </p>
+            <p className="text-base font-bold text-red-400">{formatBRL(selectedTotal)}</p>
+          </div>
+          <button
+            onClick={() => setConfirmQuitarSales(selectedSales)}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
+          >
+            Quitar tudo
+          </button>
+        </div>
+      )}
+
+      {confirmQuitarSales && (
+        <QuitarTudoModal
+          sales={confirmQuitarSales}
+          onClose={() => setConfirmQuitarSales(null)}
+          onQuitado={() => {
+            setConfirmQuitarSales(null);
+            setSelectedIds(new Set());
+            load();
+          }}
+        />
       )}
 
       {showNewSale && (
@@ -616,7 +769,7 @@ function VendasPageInner() {
       )}
       {/* Botão flutuante — só no web-app instalado, igual ao FAB do mobile.
           No navegador normal, "+ Nova venda" no topo já cumpre esse papel. */}
-      {isStandalone && (
+      {isStandalone && selectedSales.length === 0 && (
         <button
           onClick={() => setShowNewSale(true)}
           aria-label="Nova venda"
@@ -632,13 +785,32 @@ function VendasPageInner() {
   );
 }
 
-function SummaryCard({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "red" }) {
+function SummaryCard({
+  label,
+  value,
+  tone,
+  onClick,
+  hint,
+}: {
+  label: string;
+  value: string;
+  tone?: "emerald" | "red";
+  onClick?: () => void;
+  hint?: string;
+}) {
   const color = tone === "emerald" ? "text-emerald-400" : tone === "red" ? "text-red-400" : "text-zinc-100";
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+    <Tag
+      onClick={onClick}
+      className={`rounded-lg border p-3 text-left ${
+        onClick ? "border-red-900/60 transition hover:bg-zinc-900/60" : "border-zinc-800"
+      } bg-zinc-900`}
+    >
       <p className="text-xs text-zinc-500">{label}</p>
       <p className={`mt-1 text-lg font-bold ${color}`}>{value}</p>
-    </div>
+      {hint && <p className="mt-0.5 text-[11px] font-semibold text-red-400">{hint}</p>}
+    </Tag>
   );
 }
 
@@ -742,6 +914,77 @@ function ArchiveMonthModal({
           className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-500 disabled:opacity-60"
         >
           {archiving ? "Arquivando..." : "Arquivar mês"}
+        </button>
+      </div>
+    </ModalShell>
+  );
+}
+
+// Confirma e executa a quitação em lote (várias vendas do mesmo cliente de
+// uma vez), acionado pela seleção de cards/linhas ou pelo atalho no card
+// "A receber". Registra um pagamento integral por venda — mesmo endpoint
+// usado pelo "Quitar tudo" de uma venda só, em /venda/[id].
+function QuitarTudoModal({
+  sales,
+  onClose,
+  onQuitado,
+}: {
+  sales: Sale[];
+  onClose: () => void;
+  onQuitado: () => void;
+}) {
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const name = sales[0]?.customerName || "esse cliente";
+  const total = sales.reduce((sum, s) => sum + s.owed, 0);
+
+  async function handleQuitar() {
+    setWorking(true);
+    setError(null);
+    try {
+      const paidAt = todayISO();
+      const results = await Promise.all(
+        sales.map((s) =>
+          fetch(`/api/sales/${s.id}/payments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: s.owed, paidAt }),
+          })
+        )
+      );
+      if (results.some((r) => !r.ok)) {
+        setError("Algumas vendas não puderam ser quitadas — confira o que já foi registrado.");
+        setWorking(false);
+        return;
+      }
+      onQuitado();
+    } catch {
+      setError("Não foi possível quitar tudo agora — confira o que já foi registrado.");
+      setWorking(false);
+    }
+  }
+
+  return (
+    <ModalShell title={`Quitar tudo de ${name}?`} onClose={onClose}>
+      <p className="text-sm text-zinc-300">
+        <strong>{sales.length}</strong> {sales.length === 1 ? "venda" : "vendas"} · total de{" "}
+        <strong>{formatBRL(total)}</strong>.
+      </p>
+      <p className="mt-2 text-sm text-zinc-400">Isso registra o pagamento integral em cada uma dessas vendas.</p>
+      {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+      <div className="mt-5 flex justify-end gap-3">
+        <button
+          onClick={onClose}
+          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleQuitar}
+          disabled={working}
+          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
+        >
+          {working ? "Quitando..." : "Quitar tudo"}
         </button>
       </div>
     </ModalShell>
