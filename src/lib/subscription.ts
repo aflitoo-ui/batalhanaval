@@ -120,6 +120,10 @@ export async function getAccessStatus(user: CurrentUser): Promise<AccessStatus> 
 export async function requireActiveAccess(user: CurrentUser): Promise<NextResponse | null> {
   const access = await getAccessStatus(user);
   if (access.allowed) return null;
+  return deniedResponse(access.status);
+}
+
+function deniedResponse(status: AccessStatus["status"]) {
   // subscriptionStatus vai junto pra quem chama poder mostrar uma mensagem
   // específica do motivo real (estornado/contestado/atrasado), em vez do
   // "expirou" genérico que não faz sentido pra esses casos (achado em
@@ -128,8 +132,25 @@ export async function requireActiveAccess(user: CurrentUser): Promise<NextRespon
     {
       error: "Sua assinatura não está ativa. Assine para continuar usando o STRIX.",
       code: "subscription_required",
-      subscriptionStatus: access.status,
+      subscriptionStatus: status,
     },
     { status: 403 }
   );
+}
+
+/**
+ * Mesma barreira de requireActiveAccess, mas roda a checagem de assinatura
+ * em paralelo com outra leitura (a query da própria rota) em vez de esperar
+ * uma terminar pra começar a outra — cada round-trip ao Postgres (Neon) tem
+ * latência de rede real, e essas duas consultas nunca dependem uma da outra.
+ * Só serve pra LEITURA: se a assinatura estiver vencida, o resultado de
+ * `read` é descartado, então nunca use isso envolvendo um INSERT/UPDATE/DELETE.
+ */
+export async function withActiveAccess<T>(
+  user: CurrentUser,
+  read: () => Promise<T>
+): Promise<{ data: T } | NextResponse> {
+  const [access, data] = await Promise.all([getAccessStatus(user), read()]);
+  if (!access.allowed) return deniedResponse(access.status);
+  return { data };
 }

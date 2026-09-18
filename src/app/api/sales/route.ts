@@ -3,7 +3,7 @@ import { all, get, run, withTransaction } from "@/db/pool";
 import { getSessionUser, verifyPassword } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { saleSchema } from "@/lib/schemas";
-import { requireActiveAccess } from "@/lib/subscription";
+import { requireActiveAccess, withActiveAccess } from "@/lib/subscription";
 
 type SaleRow = {
   id: number;
@@ -72,19 +72,16 @@ function round2(n: number) {
 export const GET = withApiErrors("sales.GET", async (req: NextRequest) => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const denied = await requireActiveAccess(user);
-  if (denied) return denied;
 
   const includeArchived = new URL(req.url).searchParams.get("includeArchived") === "1";
-  const rows = await all<SaleRow>(listSql(includeArchived), [user.id]);
-  return NextResponse.json({ sales: rows.map(toSaleView) });
+  const result = await withActiveAccess(user, () => all<SaleRow>(listSql(includeArchived), [user.id]));
+  if (result instanceof NextResponse) return result;
+  return NextResponse.json({ sales: result.data.map(toSaleView) });
 });
 
 export const POST = withApiErrors("sales.POST", async (req: NextRequest) => {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  const denied = await requireActiveAccess(user);
-  if (denied) return denied;
 
   const body = await req.json().catch(() => null);
   const parsed = saleSchema.safeParse(body);
@@ -93,11 +90,20 @@ export const POST = withApiErrors("sales.POST", async (req: NextRequest) => {
   }
   const d = parsed.data;
 
-  const product = await get(`SELECT id FROM products WHERE id = $1 AND user_id = $2`, [d.productId, user.id]);
+  // Assinatura, produto e cliente são três leituras independentes — rodar em
+  // paralelo evita empilhar a latência de cada round-trip ao banco antes do
+  // INSERT (que aí sim precisa esperar as três confirmarem).
+  const result = await withActiveAccess(user, () =>
+    Promise.all([
+      get(`SELECT id FROM products WHERE id = $1 AND user_id = $2`, [d.productId, user.id]),
+      get(`SELECT id FROM customers WHERE id = $1 AND user_id = $2`, [d.customerId, user.id]),
+    ])
+  );
+  if (result instanceof NextResponse) return result;
+  const [product, customer] = result.data;
   if (!product) {
     return NextResponse.json({ error: "Produto não encontrado." }, { status: 404 });
   }
-  const customer = await get(`SELECT id FROM customers WHERE id = $1 AND user_id = $2`, [d.customerId, user.id]);
   if (!customer) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }

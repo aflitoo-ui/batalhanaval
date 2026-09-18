@@ -3,7 +3,7 @@ import { get, run } from "@/db/pool";
 import { getSessionUser } from "@/lib/auth";
 import { withApiErrors } from "@/lib/api-errors";
 import { saleUpdateSchema } from "@/lib/schemas";
-import { requireActiveAccess } from "@/lib/subscription";
+import { requireActiveAccess, withActiveAccess } from "@/lib/subscription";
 
 type SaleRow = {
   id: number;
@@ -62,29 +62,30 @@ export const GET = withApiErrors(
   async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-    const denied = await requireActiveAccess(user);
-    if (denied) return denied;
 
     const { id } = await ctx.params;
-    const row = await get<SaleRow>(
-      `SELECT s.id, s.sale_date as "saleDate", s.customer_id as "customerId",
-        COALESCE(c.name, s.customer_name) as "customerName",
-        s.quantity, s.unit_buy_price as "unitBuyPrice", s.unit_sell_price as "unitSellPrice",
-        s.adjustment, s.notes, p.id as "productId", p.name as "productName",
-        COALESCE(pay.total_paid, 0) as "totalPaid"
-      FROM sales s
-      JOIN products p ON p.id = s.product_id
-      LEFT JOIN customers c ON c.id = s.customer_id
-      LEFT JOIN (
-        SELECT sale_id, SUM(amount) as total_paid FROM payments GROUP BY sale_id
-      ) pay ON pay.sale_id = s.id
-      WHERE s.id = $1 AND s.user_id = $2`,
-      [id, user.id]
+    const result = await withActiveAccess(user, () =>
+      get<SaleRow>(
+        `SELECT s.id, s.sale_date as "saleDate", s.customer_id as "customerId",
+          COALESCE(c.name, s.customer_name) as "customerName",
+          s.quantity, s.unit_buy_price as "unitBuyPrice", s.unit_sell_price as "unitSellPrice",
+          s.adjustment, s.notes, p.id as "productId", p.name as "productName",
+          COALESCE(pay.total_paid, 0) as "totalPaid"
+        FROM sales s
+        JOIN products p ON p.id = s.product_id
+        LEFT JOIN customers c ON c.id = s.customer_id
+        LEFT JOIN (
+          SELECT sale_id, SUM(amount) as total_paid FROM payments GROUP BY sale_id
+        ) pay ON pay.sale_id = s.id
+        WHERE s.id = $1 AND s.user_id = $2`,
+        [id, user.id]
+      )
     );
-    if (!row) {
+    if (result instanceof NextResponse) return result;
+    if (!result.data) {
       return NextResponse.json({ error: "Venda não encontrada." }, { status: 404 });
     }
-    return NextResponse.json({ sale: toSaleView(row) });
+    return NextResponse.json({ sale: toSaleView(result.data) });
   }
 );
 
@@ -93,8 +94,6 @@ export const PATCH = withApiErrors(
   async (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-    const denied = await requireActiveAccess(user);
-    if (denied) return denied;
 
     const { id } = await ctx.params;
     const body = await req.json().catch(() => null);
@@ -103,11 +102,14 @@ export const PATCH = withApiErrors(
       return NextResponse.json({ error: parsed.error.issues[0]?.message || "Dados inválidos." }, { status: 400 });
     }
 
-    if (parsed.data.customerId !== undefined) {
-      const customer = await get(`SELECT id FROM customers WHERE id = $1 AND user_id = $2`, [parsed.data.customerId, user.id]);
-      if (!customer) {
-        return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
-      }
+    const customerResult = await withActiveAccess(user, () =>
+      parsed.data.customerId !== undefined
+        ? get(`SELECT id FROM customers WHERE id = $1 AND user_id = $2`, [parsed.data.customerId, user.id])
+        : Promise.resolve(null)
+    );
+    if (customerResult instanceof NextResponse) return customerResult;
+    if (parsed.data.customerId !== undefined && !customerResult.data) {
+      return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
     }
 
     const columnByField: Record<string, string> = {
