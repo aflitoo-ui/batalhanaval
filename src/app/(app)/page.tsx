@@ -552,6 +552,7 @@ function VendasPageInner() {
                     </div>
                   </div>
                   <div className="text-right">
+                    <p className="text-[11px] text-zinc-500">Total</p>
                     <p className="text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
                     {s.adjustment !== 0 && (
                       <p className="text-[11px] text-zinc-500">
