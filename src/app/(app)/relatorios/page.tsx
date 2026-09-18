@@ -521,7 +521,33 @@ export default function RelatoriosPage() {
         {sortedProducts.length === 0 ? (
           <p className="py-4 text-sm text-zinc-500">Nenhuma venda nesse período.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-2 md:hidden">
+            {sortedProducts.map((p) => (
+              <div key={p.name} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                <p className="mb-2 truncate text-sm font-medium text-zinc-200">{p.name}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Qtd vendida</p>
+                    <p className="tabular-nums text-zinc-300">{p.quantity}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Receita</p>
+                    <p className="tabular-nums text-zinc-300">{formatBRL(p.revenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Lucro</p>
+                    <p className="tabular-nums text-emerald-400">{formatBRL(p.profit)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Retorno</p>
+                    <p className="tabular-nums text-zinc-300">{p.marginPct.toFixed(0)}%</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[480px] table-fixed text-sm">
               <colgroup>
                 <col className="w-[30%]" />
@@ -552,6 +578,7 @@ export default function RelatoriosPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Panel>
 
@@ -578,7 +605,37 @@ export default function RelatoriosPage() {
         {sortedCustomers.length === 0 ? (
           <p className="py-4 text-sm text-zinc-500">Nenhuma venda nesse período.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="space-y-2 md:hidden">
+            {sortedCustomers.map((c) => (
+              <div
+                key={c.key}
+                onClick={c.id != null ? () => goToCustomerSales(c.name) : undefined}
+                className={`rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 ${c.id != null ? "cursor-pointer active:bg-zinc-800/50" : ""}`}
+              >
+                <p className="mb-2 truncate text-sm font-medium text-amber-400">{c.name}</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Total comprado</p>
+                    <p className="tabular-nums text-zinc-300">{formatBRL(c.total)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Pago</p>
+                    <p className="tabular-nums text-emerald-400">{formatBRL(c.paid)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Deve</p>
+                    <p className="tabular-nums text-red-400">{c.owed > 0 ? formatBRL(c.owed) : "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-zinc-500">Lucro gerado</p>
+                    <p className="tabular-nums text-emerald-400">{formatBRL(c.profit)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[480px] table-fixed text-sm">
               <colgroup>
                 <col className="w-[30%]" />
@@ -614,6 +671,7 @@ export default function RelatoriosPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Panel>
     </div>
