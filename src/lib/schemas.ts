@@ -33,6 +33,14 @@ export const paymentSchema = z.object({
   notes: z.string().trim().max(500).optional().nullable(),
 });
 
+// Pagamento de valor livre distribuído entre várias vendas do mesmo cliente
+// (da mais antiga pra mais nova) — ver src/app/api/sales/payments/route.ts.
+export const batchPaymentSchema = z.object({
+  saleIds: z.array(z.number().int().positive()).min(1).max(200),
+  amount: z.number().positive(),
+  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+});
+
 // Chamado "email" no banco/código por herança (era e-mail no começo do
 // projeto), mas não é mais validado nem tratado como e-mail — é só um login
 // de texto livre, já que o sistema nunca precisou mandar e-mail de verdade

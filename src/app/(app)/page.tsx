@@ -437,7 +437,7 @@ function VendasPageInner() {
           value={formatBRL(totals.owed)}
           tone="red"
           onClick={singleDebtor ? () => setConfirmQuitarSales(debtSales) : undefined}
-          hint={singleDebtor ? "toque pra quitar tudo" : undefined}
+          hint={singleDebtor ? "toque pra registrar pagamento" : undefined}
         />
         <SummaryCard label="Lucro" value={formatBRL(totals.profit)} tone="emerald" />
       </div>
@@ -709,7 +709,7 @@ function VendasPageInner() {
             onClick={() => setConfirmQuitarSales(selectedSales)}
             className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500"
           >
-            Quitar tudo
+            Registrar pagamento
           </button>
         </div>
       )}
@@ -921,10 +921,11 @@ function ArchiveMonthModal({
   );
 }
 
-// Confirma e executa a quitação em lote (várias vendas do mesmo cliente de
-// uma vez), acionado pela seleção de cards/linhas ou pelo atalho no card
-// "A receber". Registra um pagamento integral por venda — mesmo endpoint
-// usado pelo "Quitar tudo" de uma venda só, em /venda/[id].
+// Registra um pagamento (integral ou parcial) contra várias vendas do
+// mesmo cliente de uma vez, acionado pela seleção de cards/linhas ou pelo
+// atalho no card "A receber". O valor abate da venda mais antiga pra mais
+// nova — sem isso, um pagamento que não fecha exatamente uma venda obrigava
+// a entrar venda por venda calculando o resto na mão.
 function QuitarTudoModal({
   sales,
   onClose,
@@ -938,40 +939,69 @@ function QuitarTudoModal({
   const [error, setError] = useState<string | null>(null);
   const name = sales[0]?.customerName || "esse cliente";
   const total = sales.reduce((sum, s) => sum + s.owed, 0);
+  const [amount, setAmount] = useState(String(total.toFixed(2)).replace(".", ","));
+  const [paidAt, setPaidAt] = useState(todayISO());
+
+  const parsedAmount = parseNumber(amount);
+  const isPartial = !Number.isNaN(parsedAmount) && parsedAmount < total - 0.001;
 
   async function handleQuitar() {
-    setWorking(true);
     setError(null);
+    if (Number.isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Informe um valor válido.");
+      return;
+    }
+    if (parsedAmount > total + 0.001) {
+      setError(`Essas vendas somam ${formatBRL(total)} em aberto — o valor não pode ser maior que isso.`);
+      return;
+    }
+    setWorking(true);
     try {
-      const paidAt = todayISO();
-      const results = await Promise.all(
-        sales.map((s) =>
-          fetch(`/api/sales/${s.id}/payments`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: s.owed, paidAt }),
-          })
-        )
-      );
-      if (results.some((r) => !r.ok)) {
-        setError("Algumas vendas não puderam ser quitadas — confira o que já foi registrado.");
+      const res = await fetch("/api/sales/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saleIds: sales.map((s) => s.id), amount: parsedAmount, paidAt }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error || "Não foi possível registrar o pagamento.");
         setWorking(false);
         return;
       }
       onQuitado();
     } catch {
-      setError("Não foi possível quitar tudo agora — confira o que já foi registrado.");
+      setError("Não foi possível registrar o pagamento agora.");
       setWorking(false);
     }
   }
 
   return (
-    <ModalShell title={`Quitar tudo de ${name}?`} onClose={onClose}>
+    <ModalShell title={`Pagamento de ${name}`} onClose={onClose}>
       <p className="text-sm text-zinc-300">
-        <strong>{sales.length}</strong> {sales.length === 1 ? "venda" : "vendas"} · total de{" "}
+        <strong>{sales.length}</strong> {sales.length === 1 ? "venda" : "vendas"} · total em aberto de{" "}
         <strong>{formatBRL(total)}</strong>.
       </p>
-      <p className="mt-2 text-sm text-zinc-400">Isso registra o pagamento integral em cada uma dessas vendas.</p>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-400">Valor pago</label>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputMode="decimal"
+            className="input"
+            autoFocus
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-zinc-400">Data</label>
+          <DateField value={paidAt} onChange={setPaidAt} />
+        </div>
+      </div>
+      <p className="mt-2 text-sm text-zinc-400">
+        {isPartial
+          ? "Valor menor que o total — abate primeiro das vendas mais antigas."
+          : "Isso quita o total em aberto dessas vendas."}
+      </p>
       {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
       <div className="mt-5 flex justify-end gap-3">
         <button
@@ -985,7 +1015,7 @@ function QuitarTudoModal({
           disabled={working}
           className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-60"
         >
-          {working ? "Quitando..." : "Quitar tudo"}
+          {working ? "Registrando..." : "Registrar pagamento"}
         </button>
       </div>
     </ModalShell>
