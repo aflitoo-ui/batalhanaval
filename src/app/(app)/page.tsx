@@ -35,6 +35,7 @@ export type Sale = {
   paid: number;
   owed: number;
   profit: number;
+  groupId: number | null;
 };
 
 export type PaymentEntry = { id: number; amount: number; paidAt: string; notes: string | null };
@@ -251,6 +252,17 @@ function VendasPageInner() {
       .filter((s) => !onlyOwed || s.owed > 0)
       .filter((s) => !onlyOwed || debtAgeFilter === 0 || daysSince(s.saleDate) >= debtAgeFilter);
   }, [sales, q, onlyOwed, viewMonth, debtAgeFilter, monthFilterActive]);
+
+  // Quantas vendas compartilham o mesmo group_id (lançadas juntas no mesmo
+  // "Nova venda" com vários produtos) — usado só pra mostrar o selo 🧾 nas
+  // linhas de uma venda combinada, sem precisar reestruturar a lista.
+  const groupSizeById = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const s of filteredSales) {
+      if (s.groupId != null) counts.set(s.groupId, (counts.get(s.groupId) ?? 0) + 1);
+    }
+    return counts;
+  }, [filteredSales]);
 
   // Lista renderizada em telas com centenas de vendas ficava enorme (e no PWA
   // chegou a atrapalhar o posicionamento da barra inferior) — mostra só as
@@ -548,6 +560,14 @@ function VendasPageInner() {
                       <p className="font-medium text-amber-400">{s.customerName}</p>
                       <p className="text-xs text-zinc-500">
                         {formatDate(s.saleDate)} · {s.productName} · {s.quantity}x
+                        {s.groupId != null && (groupSizeById.get(s.groupId) ?? 0) > 1 && (
+                          <span
+                            className="ml-1"
+                            title={`Lançada junto com mais ${(groupSizeById.get(s.groupId) ?? 1) - 1} produto(s) na mesma venda`}
+                          >
+                            🧾
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -639,6 +659,14 @@ function VendasPageInner() {
                     <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
                     <td className="px-3 py-2 font-medium text-zinc-200">
                       {s.productName}
+                      {s.groupId != null && (groupSizeById.get(s.groupId) ?? 0) > 1 && (
+                        <span
+                          className="ml-1.5 text-zinc-500"
+                          title={`Lançada junto com mais ${(groupSizeById.get(s.groupId) ?? 1) - 1} produto(s) na mesma venda`}
+                        >
+                          🧾
+                        </span>
+                      )}
                       {s.notes && (
                         <span className="ml-1.5 text-zinc-500" title={s.notes}>
                           📝
@@ -1107,94 +1135,119 @@ function NewSaleModal({
 }) {
   const router = useRouter();
   const [saleDate, setSaleDate] = useState(todayISO());
-  const [productId, setProductId] = useState<number | "">(products[0]?.id ?? "");
   const [customer, setCustomer] = useState<Customer | null>(null);
-  const [quantity, setQuantity] = useState("1");
-  const [buyPrice, setBuyPrice] = useState(String(products[0]?.defaultBuyPrice ?? ""));
-  const [sellPrice, setSellPrice] = useState(String(products[0]?.defaultSellPrice ?? ""));
+  const [lines, setLines] = useState<SaleLine[]>(() => [makeSaleLine(products)]);
   const [initialPayment, setInitialPayment] = useState("");
-  const [adjustment, setAdjustment] = useState("");
-  const [adjustmentNegative, setAdjustmentNegative] = useState(false);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function handleProductChange(id: number) {
-    setProductId(id);
+  function updateLine(index: number, patch: Partial<SaleLine>) {
+    setLines((cur) => cur.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  }
+
+  function handleLineProductChange(index: number, id: number) {
     const p = products.find((x) => x.id === id);
-    if (p) {
-      setBuyPrice(String(p.defaultBuyPrice));
-      setSellPrice(String(p.defaultSellPrice));
-    }
+    updateLine(index, {
+      productId: id,
+      buyPrice: p ? String(p.defaultBuyPrice) : "",
+      sellPrice: p ? String(p.defaultSellPrice) : "",
+    });
+  }
+
+  function addLine() {
+    setLines((cur) => [...cur, makeSaleLine(products)]);
+  }
+
+  function removeLine(index: number) {
+    setLines((cur) => cur.filter((_, i) => i !== index));
   }
 
   // Prévia ao vivo (igual ao mobile) — dá pra ver o resultado antes de
-  // salvar, em vez de só descobrir depois de confirmar.
-  const qtyPreview = parseNumber(quantity) || 0;
-  const sellPreview = parseNumber(sellPrice) || 0;
-  const buyPreview = parseNumber(buyPrice) || 0;
-  const adjAbsPreview = adjustment ? parseNumber(adjustment) || 0 : 0;
-  const adjPreview = adjustmentNegative ? -adjAbsPreview : adjAbsPreview;
-  const totalPreview = qtyPreview * sellPreview + adjPreview;
-  const profitPreview = totalPreview - qtyPreview * buyPreview;
+  // salvar, em vez de só descobrir depois de confirmar. Soma todas as
+  // linhas de produto lançadas juntas.
+  const totalsPreview = lines.reduce(
+    (acc, line) => {
+      const qty = parseNumber(line.quantity) || 0;
+      const sell = parseNumber(line.sellPrice) || 0;
+      const buy = parseNumber(line.buyPrice) || 0;
+      const adjAbs = line.adjustment ? parseNumber(line.adjustment) || 0 : 0;
+      const adj = line.adjustmentNegative ? -adjAbs : adjAbs;
+      const total = qty * sell + adj;
+      return { total: acc.total + total, cost: acc.cost + qty * buy };
+    },
+    { total: 0, cost: 0 }
+  );
+  const profitPreview = totalsPreview.total - totalsPreview.cost;
   const paidPreview = initialPayment ? parseNumber(initialPayment) || 0 : 0;
-  const owedPreview = totalPreview - paidPreview;
+  const owedPreview = totalsPreview.total - paidPreview;
 
   // Se o modal abrir antes da lista de produtos terminar de carregar (ex:
-  // clique rápido logo após um refresh), productId/preços ficam vazios pois
-  // só são inicializados uma vez, no mount. Assim que a lista chegar, se o
-  // produto selecionado ainda não é válido, seleciona o primeiro de verdade
-  // e preenche os preços — em vez de deixar o campo vazio escondido atrás do
-  // <select> mostrando visualmente a primeira opção sem valor nenhum salvo.
+  // clique rápido logo após um refresh), a linha inicial fica sem produto
+  // válido pois só é inicializada uma vez, no mount. Assim que a lista
+  // chegar, corrige qualquer linha cujo produto ainda não é válido — em vez
+  // de deixar o campo vazio escondido atrás do <select>.
   useEffect(() => {
     if (products.length === 0) return;
-    if (products.some((p) => p.id === productId)) return;
-    const first = products[0];
-    setProductId(first.id);
-    setBuyPrice(String(first.defaultBuyPrice));
-    setSellPrice(String(first.defaultSellPrice));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setLines((cur) =>
+      cur.map((line) => {
+        if (products.some((p) => p.id === line.productId)) return line;
+        const first = products[0];
+        return { ...line, productId: first.id, buyPrice: String(first.defaultBuyPrice), sellPrice: String(first.defaultSellPrice) };
+      })
+    );
   }, [products]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const qty = parseNumber(quantity);
-    const qp = parseNumber(buyPrice);
-    const qv = parseNumber(sellPrice);
-    const payment = initialPayment ? parseNumber(initialPayment) : 0;
-    const adjAbs = adjustment ? parseNumber(adjustment) : 0;
-    const adj = adjustmentNegative ? -adjAbs : adjAbs;
     if (!customer) {
       setError('Selecione o cliente na lista (ou clique em "+ Criar cliente") antes de salvar.');
       return;
     }
-    if (!productId || !qty || Number.isNaN(qp) || Number.isNaN(qv) || Number.isNaN(adj)) {
-      setError("Preencha todos os campos corretamente.");
-      return;
+    const payment = initialPayment ? parseNumber(initialPayment) : 0;
+    const items: { productId: number; quantity: number; unitBuyPrice: number; unitSellPrice: number; adjustment: number }[] = [];
+    for (const line of lines) {
+      const qty = parseNumber(line.quantity);
+      const qp = parseNumber(line.buyPrice);
+      const qv = parseNumber(line.sellPrice);
+      const adjAbs = line.adjustment ? parseNumber(line.adjustment) : 0;
+      const adj = line.adjustmentNegative ? -adjAbs : adjAbs;
+      if (!line.productId || !qty || Number.isNaN(qp) || Number.isNaN(qv) || Number.isNaN(adj)) {
+        setError("Preencha todos os campos corretamente.");
+        return;
+      }
+      items.push({ productId: line.productId, quantity: qty, unitBuyPrice: qp, unitSellPrice: qv, adjustment: adj });
     }
+
     setSaving(true);
-    const res = await fetch("/api/sales", {
+    const res = await fetch("/api/sales/batch", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         saleDate,
-        productId,
         customerId: customer.id,
-        quantity: qty,
-        unitBuyPrice: qp,
-        unitSellPrice: qv,
-        adjustment: adj,
-        initialPayment: payment,
-        notes: notes.trim() || undefined,
+        items: items.map((item) => ({ ...item, notes: notes.trim() || undefined })),
       }),
     });
-    const data = await res.json();
-    setSaving(false);
+    const data = await res.json().catch(() => null);
     if (!res.ok) {
-      setError(data.error || "Erro ao salvar.");
+      setSaving(false);
+      setError(data?.error || "Erro ao salvar.");
       return;
     }
+
+    if (payment > 0 && data.ids?.length) {
+      const payRes = await fetch("/api/sales/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saleIds: data.ids, amount: payment, paidAt: saleDate }),
+      });
+      if (!payRes.ok) {
+        alert("Venda registrada, mas não foi possível registrar o pagamento inicial — registre manualmente na venda.");
+      }
+    }
+    setSaving(false);
     onSaved();
   }
 
@@ -1217,7 +1270,6 @@ function NewSaleModal({
 
   const formBody = (
       <form onSubmit={handleSubmit} className="space-y-3">
-        <ProductPicker products={products} value={productId || null} onChange={handleProductChange} />
         <CustomerPicker
           customers={customers}
           value={customer}
@@ -1225,52 +1277,99 @@ function NewSaleModal({
           onCustomerCreated={onCustomerCreated}
           usage={customerUsage}
         />
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Data">
-            <DateField value={saleDate} onChange={setSaleDate} />
-          </Field>
-          <Field label="Quantidade" labelClassName="pl-[3%]">
-            <input value={quantity} onChange={(e) => setQuantity(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Preço de venda">
-            <input value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
-          <Field label="Preço de custo">
-            <input value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="input" inputMode="decimal" />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field
-            label={
-              <>
-                Ajuste no total (opcional)
-                <InfoTip text={ADJUSTMENT_HINT} />
-              </>
-            }
-          >
-            <div className="flex gap-2">
-              <input
-                value={adjustment}
-                onChange={(e) => setAdjustment(e.target.value.replace(/-/g, ""))}
-                className="input flex-1"
-                placeholder="0,00"
-                inputMode="decimal"
-              />
-              <AdjustmentSignToggle negative={adjustmentNegative} onToggle={() => setAdjustmentNegative((v) => !v)} />
-            </div>
-          </Field>
-          <Field label="Pagou agora (em branco se for tudo fiado)">
-            <input
-              value={initialPayment}
-              onChange={(e) => setInitialPayment(e.target.value)}
-              className="input"
-              placeholder="0,00"
-              inputMode="decimal"
+        <Field label="Data">
+          <DateField value={saleDate} onChange={setSaleDate} />
+        </Field>
+
+        {lines.map((line, i) => (
+          <div key={i} className={lines.length > 1 ? "space-y-3 rounded-lg border border-zinc-800 p-3" : "space-y-3"}>
+            {lines.length > 1 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-500">Produto {i + 1}</span>
+                <button
+                  type="button"
+                  onClick={() => removeLine(i)}
+                  className="text-xs font-medium text-zinc-500 transition hover:text-red-400"
+                >
+                  remover
+                </button>
+              </div>
+            )}
+            <ProductPicker
+              products={products}
+              value={line.productId || null}
+              onChange={(id) => handleLineProductChange(i, id)}
             />
-          </Field>
-        </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Quantidade">
+                <input
+                  value={line.quantity}
+                  onChange={(e) => updateLine(i, { quantity: e.target.value })}
+                  className="input"
+                  inputMode="decimal"
+                />
+              </Field>
+              <Field label="Preço de venda">
+                <input
+                  value={line.sellPrice}
+                  onChange={(e) => updateLine(i, { sellPrice: e.target.value })}
+                  className="input"
+                  inputMode="decimal"
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Preço de custo">
+                <input
+                  value={line.buyPrice}
+                  onChange={(e) => updateLine(i, { buyPrice: e.target.value })}
+                  className="input"
+                  inputMode="decimal"
+                />
+              </Field>
+              <Field
+                label={
+                  <>
+                    Ajuste no total (opcional)
+                    <InfoTip text={ADJUSTMENT_HINT} />
+                  </>
+                }
+              >
+                <div className="flex gap-2">
+                  <input
+                    value={line.adjustment}
+                    onChange={(e) => updateLine(i, { adjustment: e.target.value.replace(/-/g, "") })}
+                    className="input flex-1"
+                    placeholder="0,00"
+                    inputMode="decimal"
+                  />
+                  <AdjustmentSignToggle
+                    negative={line.adjustmentNegative}
+                    onToggle={() => updateLine(i, { adjustmentNegative: !line.adjustmentNegative })}
+                  />
+                </div>
+              </Field>
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={addLine}
+          className="w-full rounded-lg border border-dashed border-zinc-700 py-2 text-sm font-medium text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-200"
+        >
+          + Adicionar outro produto
+        </button>
+
+        <Field label="Pagou agora (em branco se for tudo fiado)">
+          <input
+            value={initialPayment}
+            onChange={(e) => setInitialPayment(e.target.value)}
+            className="input"
+            placeholder="0,00"
+            inputMode="decimal"
+          />
+        </Field>
         <Field label="Observação (opcional)">
           <textarea
             value={notes}
@@ -1283,7 +1382,7 @@ function NewSaleModal({
         <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm">
           <div className="flex items-center justify-between">
             <span className="text-zinc-500">Total</span>
-            <span className="font-semibold text-zinc-100">{formatBRL(totalPreview)}</span>
+            <span className="font-semibold text-zinc-100">{formatBRL(totalsPreview.total)}</span>
           </div>
           <div className="mt-1 flex items-center justify-between">
             <span className="text-zinc-500">Lucro</span>
@@ -1311,6 +1410,27 @@ function NewSaleModal({
   );
 
   return <ModalShell title="Nova venda" onClose={onClose}>{formBody}</ModalShell>;
+}
+
+type SaleLine = {
+  productId: number | "";
+  quantity: string;
+  buyPrice: string;
+  sellPrice: string;
+  adjustment: string;
+  adjustmentNegative: boolean;
+};
+
+function makeSaleLine(products: Product[]): SaleLine {
+  const p = products[0];
+  return {
+    productId: p?.id ?? "",
+    quantity: "1",
+    buyPrice: String(p?.defaultBuyPrice ?? ""),
+    sellPrice: String(p?.defaultSellPrice ?? ""),
+    adjustment: "",
+    adjustmentNegative: false,
+  };
 }
 
 // Busca + chips, igual ao seletor de produto do mobile — mais rápido de

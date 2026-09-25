@@ -41,6 +41,24 @@ export const batchPaymentSchema = z.object({
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
 });
 
+const saleItemSchema = z.object({
+  productId: z.number().int().positive(),
+  quantity: z.number().positive(),
+  unitBuyPrice: z.number().min(0),
+  unitSellPrice: z.number().min(0),
+  adjustment: z.number().optional(),
+  notes: z.string().trim().max(500).optional().nullable(),
+});
+
+// Lança vários produtos numa venda só (mesmo cliente, mesma data) — ver
+// src/app/api/sales/batch/route.ts. Por baixo continua uma linha por
+// produto; só compartilham group_id quando items.length > 1.
+export const batchCreateSaleSchema = z.object({
+  saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+  customerId: z.number().int().positive(),
+  items: z.array(saleItemSchema).min(1).max(20),
+});
+
 // Chamado "email" no banco/código por herança (era e-mail no começo do
 // projeto), mas não é mais validado nem tratado como e-mail — é só um login
 // de texto livre, já que o sistema nunca precisou mandar e-mail de verdade

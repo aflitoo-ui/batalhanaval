@@ -257,4 +257,13 @@ CREATE TABLE IF NOT EXISTS password_resets (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+
+-- Venda com vários produtos: por baixo continua sendo uma linha por produto
+-- em "sales" (mantém intacto tudo que já foi testado — dívida, pagamento
+-- parcial, relatórios), mas várias linhas lançadas juntas (mesmo cliente,
+-- mesma data, no mesmo envio do formulário) compartilham esse group_id pra
+-- a tela conseguir juntar visualmente numa "venda" só. NULL quando a venda
+-- tem um produto só (não precisa agrupar com nada).
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS group_id INTEGER;
+CREATE INDEX IF NOT EXISTS idx_sales_group ON sales(group_id) WHERE group_id IS NOT NULL;
 `;

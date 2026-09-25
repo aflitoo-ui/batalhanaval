@@ -18,6 +18,7 @@ type SaleRow = {
   productId: number;
   productName: string;
   totalPaid: string;
+  groupId: number | null;
 };
 
 function listSql(includeArchived: boolean) {
@@ -26,7 +27,7 @@ function listSql(includeArchived: boolean) {
       COALESCE(c.name, s.customer_name) as "customerName",
       s.quantity, s.unit_buy_price as "unitBuyPrice", s.unit_sell_price as "unitSellPrice",
       s.adjustment, s.notes, p.id as "productId", p.name as "productName",
-      COALESCE(pay.total_paid, 0) as "totalPaid"
+      COALESCE(pay.total_paid, 0) as "totalPaid", s.group_id as "groupId"
     FROM sales s
     JOIN products p ON p.id = s.product_id
     LEFT JOIN customers c ON c.id = s.customer_id
@@ -62,6 +63,7 @@ function toSaleView(r: SaleRow) {
     paid: round2(totalPaid),
     owed: round2(total - totalPaid),
     profit: round2(total - cost),
+    groupId: r.groupId,
   };
 }
 
