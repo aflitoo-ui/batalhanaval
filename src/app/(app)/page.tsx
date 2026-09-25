@@ -1373,7 +1373,7 @@ function NewSaleModal({
         </Field>
 
         {lines.map((line, i) => (
-          <div key={i} className={lines.length > 1 ? "space-y-3 rounded-lg border border-zinc-800 p-3" : "space-y-3"}>
+          <div key={i} className={lines.length > 1 ? "space-y-3 rounded-lg border border-[#6139ae]/50 bg-[#3a2268]/5 p-3" : "space-y-3"}>
             {lines.length > 1 && (
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-zinc-500">Produto {i + 1}</span>
