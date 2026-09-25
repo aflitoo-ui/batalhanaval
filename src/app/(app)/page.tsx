@@ -253,17 +253,6 @@ function VendasPageInner() {
       .filter((s) => !onlyOwed || debtAgeFilter === 0 || daysSince(s.saleDate) >= debtAgeFilter);
   }, [sales, q, onlyOwed, viewMonth, debtAgeFilter, monthFilterActive]);
 
-  // Quantas vendas compartilham o mesmo group_id (lançadas juntas no mesmo
-  // "Nova venda" com vários produtos) — usado só pra mostrar o selo 🧾 nas
-  // linhas de uma venda combinada, sem precisar reestruturar a lista.
-  const groupSizeById = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const s of filteredSales) {
-      if (s.groupId != null) counts.set(s.groupId, (counts.get(s.groupId) ?? 0) + 1);
-    }
-    return counts;
-  }, [filteredSales]);
-
   // Lista renderizada em telas com centenas de vendas ficava enorme (e no PWA
   // chegou a atrapalhar o posicionamento da barra inferior) — mostra só as
   // primeiras 80 até a pessoa pedir o resto. Some sozinho quando o filtro
@@ -277,6 +266,23 @@ function VendasPageInner() {
     () => (showAllSales ? filteredSales : filteredSales.slice(0, SALES_PAGE_SIZE)),
     [filteredSales, showAllSales]
   );
+
+  // Agrupa vendas consecutivas com o mesmo group_id (lançadas juntas em
+  // "Nova venda" com vários produtos) — a ordenação por data/id já deixa os
+  // integrantes de um mesmo grupo lado a lado, então um scan simples basta.
+  type SaleGroup = { key: string; sales: Sale[] };
+  const saleGroups = useMemo<SaleGroup[]>(() => {
+    const groups: SaleGroup[] = [];
+    for (const s of visibleSales) {
+      const last = groups[groups.length - 1];
+      if (last && s.groupId != null && last.sales[0].groupId === s.groupId) {
+        last.sales.push(s);
+      } else {
+        groups.push({ key: `g${s.id}`, sales: [s] });
+      }
+    }
+    return groups;
+  }, [visibleSales]);
 
   // Um mês só é arquivado por inteiro (a rota de arquivar pega todas as
   // vendas do mês de uma vez) — então "sem vendas ativas mas com vendas no
@@ -522,86 +528,41 @@ function VendasPageInner() {
         <>
           {/* Cartões — telas pequenas */}
           <div className="space-y-3 md:hidden">
-            {visibleSales.map((s) => (
-              <div
-                key={s.id}
-                onClick={() => router.push(`/venda/${s.id}`)}
-                className={`rounded-lg border p-3 active:bg-zinc-800/50 ${
-                  selectedIds.has(s.id) ? "border-emerald-600 bg-zinc-800" : "border-zinc-800 bg-zinc-900"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    {s.owed > 0.001 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleSelect(s);
-                        }}
-                        aria-label={selectedIds.has(s.id) ? "Desmarcar venda" : "Selecionar venda"}
-                        className="mt-0.5 shrink-0"
+            {saleGroups.map((g) =>
+              g.sales.length === 1 ? (
+                <div
+                  key={g.key}
+                  onClick={() => router.push(`/venda/${g.sales[0].id}`)}
+                  className={`rounded-lg border p-3 active:bg-zinc-800/50 ${
+                    selectedIds.has(g.sales[0].id) ? "border-emerald-600 bg-zinc-800" : "border-zinc-800 bg-zinc-900"
+                  }`}
+                >
+                  <SaleCardLine s={g.sales[0]} selected={selectedIds.has(g.sales[0].id)} onToggleSelect={() => toggleSelect(g.sales[0])} showHeader />
+                </div>
+              ) : (
+                <div key={g.key} className="rounded-lg border border-[#6139ae]/50 bg-zinc-900 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="font-medium text-amber-400">{g.sales[0].customerName}</p>
+                    <p className="text-xs text-zinc-500">
+                      {formatDate(g.sales[0].saleDate)} · 🧾 {g.sales.length} produtos
+                    </p>
+                  </div>
+                  <div className="divide-y divide-zinc-800">
+                    {g.sales.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() => router.push(`/venda/${s.id}`)}
+                        className={`-mx-1 rounded-md px-1 py-2 first:pt-0 last:pb-0 active:bg-zinc-800/50 ${
+                          selectedIds.has(s.id) ? "bg-zinc-800" : ""
+                        }`}
                       >
-                        <svg
-                          viewBox="0 0 24 24"
-                          className={`h-5 w-5 ${selectedIds.has(s.id) ? "text-emerald-400" : "text-zinc-600"}`}
-                          fill={selectedIds.has(s.id) ? "currentColor" : "none"}
-                          stroke="currentColor"
-                          strokeWidth={2}
-                        >
-                          {selectedIds.has(s.id) ? (
-                            <path d="M9 12.5l2 2 4-5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
-                          ) : (
-                            <circle cx="12" cy="12" r="9" />
-                          )}
-                        </svg>
-                      </button>
-                    )}
-                    <div>
-                      <p className="font-medium text-amber-400">{s.customerName}</p>
-                      <p className="text-xs text-zinc-500">
-                        {formatDate(s.saleDate)} · {s.productName} · {s.quantity}x
-                        {s.groupId != null && (groupSizeById.get(s.groupId) ?? 0) > 1 && (
-                          <span
-                            className="ml-1"
-                            title={`Lançada junto com mais ${(groupSizeById.get(s.groupId) ?? 1) - 1} produto(s) na mesma venda`}
-                          >
-                            🧾
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[11px] text-zinc-500">Total</p>
-                    <p className="text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
-                    {s.adjustment !== 0 && (
-                      <p className="text-[11px] text-zinc-500">
-                        ajuste: {s.adjustment > 0 ? "+" : ""}
-                        {formatBRL(s.adjustment)}
-                      </p>
-                    )}
+                        <SaleCardLine s={s} selected={selectedIds.has(s.id)} onToggleSelect={() => toggleSelect(s)} showHeader={false} />
+                      </div>
+                    ))}
                   </div>
                 </div>
-                {s.notes && <p className="mt-1.5 text-xs italic text-zinc-500">{s.notes}</p>}
-                <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <p className="text-[11px] text-zinc-500">Pagou</p>
-                    <p className="text-emerald-400">{formatBRL(s.paid)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-zinc-500">Deve</p>
-                    <p className="font-medium text-red-400">{s.owed > 0 ? formatBRL(s.owed) : "-"}</p>
-                    {s.owed > 0 && daysSince(s.saleDate) > 0 && (
-                      <p className="text-[10px] text-zinc-500">há {daysSince(s.saleDate)}d</p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-zinc-500">Lucro</p>
-                    <p className="text-zinc-200">{formatBRL(s.profit)}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
 
           {/* Tabela — telas médias pra cima */}
@@ -623,82 +584,33 @@ function VendasPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {visibleSales.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => router.push(`/venda/${s.id}`)}
-                    className={`cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50 ${
-                      selectedIds.has(s.id) ? "bg-zinc-800/60" : ""
-                    }`}
-                  >
-                    <td className="px-3 py-2">
-                      {s.owed > 0.001 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelect(s);
-                          }}
-                          aria-label={selectedIds.has(s.id) ? "Desmarcar venda" : "Selecionar venda"}
-                        >
-                          <svg
-                            viewBox="0 0 24 24"
-                            className={`h-4 w-4 ${selectedIds.has(s.id) ? "text-emerald-400" : "text-zinc-600"}`}
-                            fill={selectedIds.has(s.id) ? "currentColor" : "none"}
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            {selectedIds.has(s.id) ? (
-                              <path d="M9 12.5l2 2 4-5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
-                            ) : (
-                              <circle cx="12" cy="12" r="9" />
-                            )}
-                          </svg>
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-zinc-400">{formatDate(s.saleDate)}</td>
-                    <td className="px-3 py-2 font-medium text-zinc-200">
-                      {s.productName}
-                      {s.groupId != null && (groupSizeById.get(s.groupId) ?? 0) > 1 && (
-                        <span
-                          className="ml-1.5 text-zinc-500"
-                          title={`Lançada junto com mais ${(groupSizeById.get(s.groupId) ?? 1) - 1} produto(s) na mesma venda`}
-                        >
-                          🧾
-                        </span>
-                      )}
-                      {s.notes && (
-                        <span className="ml-1.5 text-zinc-500" title={s.notes}>
-                          📝
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right text-zinc-300">{s.quantity}</td>
-                    <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
-                    <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
-                    <td className="px-3 py-2 text-right text-zinc-200">
-                      {s.adjustment !== 0 && (
-                        <span
-                          className="mr-1 text-xs text-zinc-500"
-                          title={`Ajuste de ${formatBRL(s.adjustment)} incluído no total`}
-                        >
-                          ({s.adjustment > 0 ? "+" : ""}
-                          {formatBRL(s.adjustment)})
-                        </span>
-                      )}
-                      {formatBRL(s.total)}
-                    </td>
-                    <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
-                    <td className="px-3 py-2 text-right font-medium text-red-400">
-                      {s.owed > 0 && daysSince(s.saleDate) > 0 && (
-                        <span className="mr-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>
-                      )}
-                      {s.owed > 0 ? formatBRL(s.owed) : "-"}
-                    </td>
-                    <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
-                    <td className="px-3 py-2 text-amber-400">{s.customerName}</td>
-                  </tr>
-                ))}
+                {saleGroups.map((g) =>
+                  g.sales.length === 1 ? (
+                    <SaleTableRow
+                      key={g.key}
+                      s={g.sales[0]}
+                      selected={selectedIds.has(g.sales[0].id)}
+                      onToggleSelect={() => toggleSelect(g.sales[0])}
+                      onOpen={() => router.push(`/venda/${g.sales[0].id}`)}
+                      showDateAndCustomer
+                      dateRowSpan={1}
+                      grouped={false}
+                    />
+                  ) : (
+                    g.sales.map((s, i) => (
+                      <SaleTableRow
+                        key={s.id}
+                        s={s}
+                        selected={selectedIds.has(s.id)}
+                        onToggleSelect={() => toggleSelect(s)}
+                        onOpen={() => router.push(`/venda/${s.id}`)}
+                        showDateAndCustomer={i === 0}
+                        dateRowSpan={g.sales.length}
+                        grouped
+                      />
+                    ))
+                  )
+                )}
               </tbody>
             </table>
           </div>
@@ -811,6 +723,185 @@ function VendasPageInner() {
         </button>
       )}
     </div>
+  );
+}
+
+// Corpo de uma linha de venda no cartão mobile — reaproveitado tanto pra
+// venda avulsa (com cabeçalho cliente/data próprio) quanto pra cada produto
+// dentro de um cartão de venda combinada (showHeader=false, o cabeçalho já
+// aparece uma vez só no topo do grupo).
+function SaleCardLine({
+  s,
+  selected,
+  onToggleSelect,
+  showHeader,
+}: {
+  s: Sale;
+  selected: boolean;
+  onToggleSelect: () => void;
+  showHeader: boolean;
+}) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          {s.owed > 0.001 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect();
+              }}
+              aria-label={selected ? "Desmarcar venda" : "Selecionar venda"}
+              className="mt-0.5 shrink-0"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className={`h-5 w-5 ${selected ? "text-emerald-400" : "text-zinc-600"}`}
+                fill={selected ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                {selected ? (
+                  <path d="M9 12.5l2 2 4-5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
+                ) : (
+                  <circle cx="12" cy="12" r="9" />
+                )}
+              </svg>
+            </button>
+          )}
+          <div>
+            {showHeader && <p className="font-medium text-amber-400">{s.customerName}</p>}
+            <p className="text-xs text-zinc-500">
+              {showHeader && `${formatDate(s.saleDate)} · `}
+              {s.productName} · {s.quantity}x
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] text-zinc-500">Total</p>
+          <p className="text-sm font-medium text-zinc-100">{formatBRL(s.total)}</p>
+          {s.adjustment !== 0 && (
+            <p className="text-[11px] text-zinc-500">
+              ajuste: {s.adjustment > 0 ? "+" : ""}
+              {formatBRL(s.adjustment)}
+            </p>
+          )}
+        </div>
+      </div>
+      {s.notes && <p className="mt-1.5 text-xs italic text-zinc-500">{s.notes}</p>}
+      <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
+        <div>
+          <p className="text-[11px] text-zinc-500">Pagou</p>
+          <p className="text-emerald-400">{formatBRL(s.paid)}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-zinc-500">Deve</p>
+          <p className="font-medium text-red-400">{s.owed > 0 ? formatBRL(s.owed) : "-"}</p>
+          {s.owed > 0 && daysSince(s.saleDate) > 0 && (
+            <p className="text-[10px] text-zinc-500">há {daysSince(s.saleDate)}d</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[11px] text-zinc-500">Lucro</p>
+          <p className="text-zinc-200">{formatBRL(s.profit)}</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Linha de venda na tabela desktop — quando faz parte de uma venda
+// combinada (grouped=true), Data e Cliente aparecem só na primeira linha
+// do grupo (rowSpan cobre as demais), com um tom de fundo levemente
+// arroxeado ligando visualmente as linhas do mesmo grupo.
+function SaleTableRow({
+  s,
+  selected,
+  onToggleSelect,
+  onOpen,
+  showDateAndCustomer,
+  dateRowSpan,
+  grouped,
+}: {
+  s: Sale;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onOpen: () => void;
+  showDateAndCustomer: boolean;
+  dateRowSpan: number;
+  grouped: boolean;
+}) {
+  return (
+    <tr
+      onClick={onOpen}
+      className={`cursor-pointer border-b border-zinc-900 last:border-0 hover:bg-zinc-900/50 ${
+        selected ? "bg-zinc-800/60" : grouped ? "bg-[#3a2268]/10" : ""
+      }`}
+    >
+      <td className="px-3 py-2">
+        {s.owed > 0.001 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelect();
+            }}
+            aria-label={selected ? "Desmarcar venda" : "Selecionar venda"}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className={`h-4 w-4 ${selected ? "text-emerald-400" : "text-zinc-600"}`}
+              fill={selected ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              {selected ? (
+                <path d="M9 12.5l2 2 4-5M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" strokeLinecap="round" strokeLinejoin="round" />
+              ) : (
+                <circle cx="12" cy="12" r="9" />
+              )}
+            </svg>
+          </button>
+        )}
+      </td>
+      {showDateAndCustomer && (
+        <td className="px-3 py-2 align-top text-zinc-400" rowSpan={dateRowSpan}>
+          {formatDate(s.saleDate)}
+        </td>
+      )}
+      <td className="px-3 py-2 font-medium text-zinc-200">
+        {s.productName}
+        {s.notes && (
+          <span className="ml-1.5 text-zinc-500" title={s.notes}>
+            📝
+          </span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-right text-zinc-300">{s.quantity}</td>
+      <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitBuyPrice)}</td>
+      <td className="px-3 py-2 text-right text-zinc-400">{formatBRL(s.unitSellPrice)}</td>
+      <td className="px-3 py-2 text-right text-zinc-200">
+        {s.adjustment !== 0 && (
+          <span className="mr-1 text-xs text-zinc-500" title={`Ajuste de ${formatBRL(s.adjustment)} incluído no total`}>
+            ({s.adjustment > 0 ? "+" : ""}
+            {formatBRL(s.adjustment)})
+          </span>
+        )}
+        {formatBRL(s.total)}
+      </td>
+      <td className="px-3 py-2 text-right text-emerald-400">{formatBRL(s.paid)}</td>
+      <td className="px-3 py-2 text-right font-medium text-red-400">
+        {s.owed > 0 && daysSince(s.saleDate) > 0 && (
+          <span className="mr-1 text-xs font-normal text-zinc-500">(há {daysSince(s.saleDate)}d)</span>
+        )}
+        {s.owed > 0 ? formatBRL(s.owed) : "-"}
+      </td>
+      <td className="px-3 py-2 text-right text-zinc-200">{formatBRL(s.profit)}</td>
+      {showDateAndCustomer && (
+        <td className="px-3 py-2 align-top text-amber-400" rowSpan={dateRowSpan}>
+          {s.customerName}
+        </td>
+      )}
+    </tr>
   );
 }
 
