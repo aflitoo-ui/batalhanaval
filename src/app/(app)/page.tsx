@@ -1356,7 +1356,7 @@ function NewSaleModal({
         <button
           type="button"
           onClick={addLine}
-          className="w-full rounded-lg border border-dashed border-zinc-700 py-2 text-sm font-medium text-zinc-400 transition hover:border-zinc-600 hover:text-zinc-200"
+          className="w-full rounded-lg border border-dashed border-[#6139ae] bg-[#3a2268]/10 py-2 text-sm font-semibold text-[#c2aaf0] transition hover:border-[#a483d9] hover:bg-[#3a2268]/20 hover:text-white"
         >
           + Adicionar outro produto
         </button>
