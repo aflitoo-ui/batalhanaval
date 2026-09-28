@@ -700,28 +700,20 @@ function VendasPageInner() {
           }}
         />
       )}
-      {/* Botão flutuante — sempre fixo na tela, acompanhando a rolagem. No
-          web-app instalado é o FAB redondo (junto com a barra de baixo); no
-          navegador normal mantém o formato retangular com texto, só que fixo
-          em vez de rolar junto com o cabeçalho. */}
-      {isStandalone && selectedSales.length === 0 && (
+      {/* Botão flutuante — mesmo FAB redondo em ambos os casos, sempre fixo
+          na tela acompanhando a rolagem. No web-app instalado fica acima da
+          barra de abas (bottom maior); no navegador normal, sem essa barra,
+          fica mais colado ao canto. */}
+      {selectedSales.length === 0 && (
         <button
           onClick={() => setShowNewSale(true)}
           aria-label="Nova venda"
           className="fixed right-4 z-30 flex h-[54px] w-[54px] items-center justify-center rounded-full bg-[#3a2268] text-white shadow-lg shadow-black/40 transition hover:bg-[#6139ae]"
-          style={{ bottom: "calc(64px + env(safe-area-inset-bottom) + 16px)" }}
+          style={{ bottom: isStandalone ? "calc(64px + env(safe-area-inset-bottom) + 16px)" : "1rem" }}
         >
           <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={2.5}>
             <path d="M12 5v14M5 12h14" strokeLinecap="round" />
           </svg>
-        </button>
-      )}
-      {!isStandalone && selectedSales.length === 0 && (
-        <button
-          onClick={() => setShowNewSale(true)}
-          className="fixed bottom-4 right-4 z-30 rounded-md bg-[#3a2268] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-black/40 transition hover:bg-[#6139ae]"
-        >
-          + Nova venda
         </button>
       )}
     </div>
