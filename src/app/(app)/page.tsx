@@ -367,14 +367,6 @@ function VendasPageInner() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-zinc-100">Vendas</h1>
-        {!isStandalone && (
-          <button
-            onClick={() => setShowNewSale(true)}
-            className="rounded-md bg-[#3a2268] px-4 py-1.5 text-sm font-medium text-white transition hover:bg-[#6139ae]"
-          >
-            + Nova venda
-          </button>
-        )}
       </div>
 
       <div className={`flex items-center justify-center gap-3 ${monthFilterActive ? "" : "opacity-40"}`}>
@@ -708,8 +700,10 @@ function VendasPageInner() {
           }}
         />
       )}
-      {/* Botão flutuante — só no web-app instalado, igual ao FAB do mobile.
-          No navegador normal, "+ Nova venda" no topo já cumpre esse papel. */}
+      {/* Botão flutuante — sempre fixo na tela, acompanhando a rolagem. No
+          web-app instalado é o FAB redondo (junto com a barra de baixo); no
+          navegador normal mantém o formato retangular com texto, só que fixo
+          em vez de rolar junto com o cabeçalho. */}
       {isStandalone && selectedSales.length === 0 && (
         <button
           onClick={() => setShowNewSale(true)}
@@ -720,6 +714,14 @@ function VendasPageInner() {
           <svg viewBox="0 0 24 24" className="h-[26px] w-[26px]" fill="none" stroke="currentColor" strokeWidth={2.5}>
             <path d="M12 5v14M5 12h14" strokeLinecap="round" />
           </svg>
+        </button>
+      )}
+      {!isStandalone && selectedSales.length === 0 && (
+        <button
+          onClick={() => setShowNewSale(true)}
+          className="fixed bottom-4 right-4 z-30 rounded-md bg-[#3a2268] px-4 py-2 text-sm font-medium text-white shadow-lg shadow-black/40 transition hover:bg-[#6139ae]"
+        >
+          + Nova venda
         </button>
       )}
     </div>
