@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstallSection } from "@/components/InstallSection";
 
 const SUPPORT_URL = "https://t.me/nick_ki";
 
@@ -95,6 +96,8 @@ export default function SobrePage() {
       </p>
 
       <div className="space-y-4">
+        <InstallSection />
+
         <Card icon={<ChartIcon />} title="Seu negócio, organizado">
           <Point label="Vendas">
             registre à vista ou fiado e veja na hora quanto já recebeu, quanto falta
