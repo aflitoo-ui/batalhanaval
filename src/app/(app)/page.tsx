@@ -797,7 +797,7 @@ function SaleCardLine({
         </div>
         <div>
           <p className="text-[11px] text-zinc-500">Lucro</p>
-          <p className="text-zinc-200">{formatBRL(s.profit)}</p>
+          <p className={s.profit >= 0 ? "text-emerald-400" : "text-red-400"}>{formatBRL(s.profit)}</p>
         </div>
       </div>
     </>
